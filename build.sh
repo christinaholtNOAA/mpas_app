@@ -10,7 +10,7 @@ OPTIONS
       show this help guide
   -p, --platform=PLATFORM
       name of machine you are building on
-      (e.g. cheyenne | hera | jet | orion | wcoss2)
+      (e.g. hera | jet)
   -c, --compiler=COMPILER
       compiler to use; default depends on platform
       (e.g. intel | gnu | cray | gccgfortran)
@@ -295,10 +295,6 @@ if [ "${SINGLE_PRECISION}" = true ]; then
   MPAS_MAKE_OPTIONS="${MAKE_OPTIONS} PRECISION=single"
 fi
 
-# creating the scripts directory here is only necessary until there is a 
-# permanent scripts directory with runscripts, at which point this should
-# be removed
-
 EXEC_DIR="${MPAS_DIR}/exec"
 if [ ! -d "$EXEC_DIR" ]; then
   mkdir "$EXEC_DIR"
@@ -309,14 +305,15 @@ cd ${MPAS_DIR}/src/MPAS-Model
 printf "\nATMOS_ONLY: ${ATMOS_ONLY}\n"
 
 if [ ${ATMOS_ONLY} = false ]; then
-  make clean CORE=atmosphere_model
+  make clean CORE=init_atmosphere
   make ifort CORE=init_atmosphere ${MPAS_MAKE_OPTIONS}
   cp -v init_atmosphere_model ${EXEC_DIR}
-  make clean CORE=init_atmosphere
+  make clean CORE=atmosphere
 fi
 
 make ifort CORE=atmosphere ${MPAS_MAKE_OPTIONS}
 cp -v atmosphere_model ${EXEC_DIR}
+cp -v build_tables ${EXEC_DIR}
 
 if [ "${CLEAN}" = true ]; then
     if [ -f $PWD/Makefile ]; then
@@ -324,5 +321,15 @@ if [ "${CLEAN}" = true ]; then
        make ${MAKE_SETTINGS} clean 2>&1 | tee log.make
     fi
 fi
+
+# make mpassit executable
+cd ${MPAS_DIR}/src/MPASSIT
+./build.sh ${PLATFORM}
+cp -v bin/mpassit ${EXEC_DIR}
+
+# make upp ??????
+
+
+
 
 exit 0
