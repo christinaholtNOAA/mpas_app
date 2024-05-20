@@ -179,7 +179,7 @@ conda activate
 if ! conda env list | grep -q "^mpas_app\s" ; then
   mamba env create -n mpas_app --file environment.yml
   mamba install -y conda-build conda-verify
-  git clone https://github.com/ufs-community/uwtools
+#  git clone https://github.com/ufs-community/uwtools
   pushd uwtools
   conda build recipe
   conda activate mpas_app
@@ -192,6 +192,9 @@ APPLICATION=$(echo ${APPLICATION} | tr '[a-z]' '[A-Z]')
 if ! conda env list | grep -q "^ungrib\s" ; then
   mamba create -y -n ungrib -c maddenp ungrib
 fi
+
+exit
+
 
 # Conda environment should have linux utilities to perform these tasks on macos.
 MPAS_DIR=$(cd "$(dirname "$(readlink -f -n "${BASH_SOURCE[0]}" )" )" && pwd -P)
@@ -320,8 +323,3 @@ cd ${MPAS_DIR}/src/MPASSIT
 cp -v bin/mpassit ${EXEC_DIR}
 
 # make upp ??????
-
-
-
-
-exit 0
