@@ -50,7 +50,7 @@ create_ics:
       path: "{{ prepare_grib.ungrib['run_dir'] }}"
     execution:
       batchargs:
-        cores: 4
+        cores: 12
         walltime: 01:30:00
       envcmds:
         - module use {{ user.mpas_app }}/modulefiles
@@ -62,9 +62,9 @@ create_ics:
     files_to_copy: &mpas_init_files_to_copy
       "{{ user.mesh_label }}.static.nc": "{{ data.mesh_files }}/{{ user.mesh_label }}.static.nc"
       "{{ user.mesh_label }}.graph.info.part.{{mpas_init.execution['batchargs']['cores']}}": '{{ user.experiment_dir }}/{{ user.mesh_label }}.graph.info.part.{{mpas_init.execution["batchargs"]["cores"]}}'
-      stream_list.atmosphere.diagnostics: "{{ user.mpas_app }}/parm/mpas/stream_list.atmosphere.diagnostics"
-      stream_list.atmosphere.output: "{{ user.mpas_app }}/parm/mpas/stream_list.atmosphere.output"
-      stream_list.atmosphere.surface: "{{ user.mpas_app }}/parm/mpas/stream_list.atmosphere.surface"
+      stream_list.atmosphere.diagnostics: "{{ user.mpas_app }}/src/MPAS-Model/stream_list.atmosphere.diagnostics"
+      stream_list.atmosphere.output: "{{ user.mpas_app }}/src/MPAS-Model/stream_list.atmosphere.output"
+      stream_list.atmosphere.surface: "{{ user.mpas_app }}/src/MPAS-Model/stream_list.atmosphere.surface"
     files_to_link: &mpas_init_files_to_link
       CAM_ABS_DATA.DBL: "{{ user.mpas_app }}/src/MPAS-Model/CAM_ABS_DATA.DBL"
       CAM_AEROPT_DATA.DBL: "{{ user.mpas_app }}/src/MPAS-Model/CAM_AEROPT_DATA.DBL"
@@ -139,9 +139,9 @@ forecast:
     files_to_copy:
       "{{ user.mesh_label }}.init.nc": "{{ create_ics.mpas_init['run_dir'] }}/{{ user.mesh_label }}.init.nc"
       "{{ user.mesh_label }}.graph.info.part.{{mpas.execution['batchargs']['cores']}}": '{{ user.experiment_dir }}/{{ user.mesh_label }}.graph.info.part.{{mpas.execution["batchargs"]["cores"]}}'
-      stream_list.atmosphere.diagnostics: "{{ user.mpas_app }}/parm/mpas/stream_list.atmosphere.diagnostics"
-      stream_list.atmosphere.output: "{{ user.mpas_app }}/parm/mpas/stream_list.atmosphere.output"
-      stream_list.atmosphere.surface: "{{ user.mpas_app }}/parm/mpas/stream_list.atmosphere.surface"
+      stream_list.atmosphere.diagnostics: "{{ user.mpas_app }}/src/MPAS-Model/stream_list.atmosphere.diagnostics"
+      stream_list.atmosphere.output: "{{ user.mpas_app }}/src/MPAS-Model/stream_list.atmosphere.output"
+      stream_list.atmosphere.surface: "{{ user.mpas_app }}/src/MPAS-Model/stream_list.atmosphere.surface"
     files_to_link:
       <<: *mpas_init_files_to_link
     lateral_boundary_conditions:
