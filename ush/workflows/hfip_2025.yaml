@@ -6,14 +6,22 @@ user:
   mesh_label: x5.8060930
   workflow_blocks:
     - cold_start.yaml
+    - hfip_preproc.yaml
     - post.yaml
     - graphics.yaml
 
 workflow:
   tasks:
+    task_get_ics_data: !remove
     task_get_lbcs_data: !remove
     task_ungrib_lbcs: !remove
     task_mpas_lbcs: !remove
+    task_ungrib_ics:
+      dependency:
+        taskdep: !remove
+        taskdep_choose_storm:
+          attrs:
+            task: choose_storm
     task_mpas:
       dependency:
         taskdep:
