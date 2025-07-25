@@ -1,5 +1,6 @@
-#! /bin/bash
+#!/bin/bash
 
+set -xue -o pipefail
 source "$INSTALLDIR/parm/paths.sh"
 source "$INSTALLDIR/scripts/grabNpost.sh"
 
@@ -12,7 +13,10 @@ naptime=120 # seconds
 infinity=100 # infinite loop guard
 cycles=1
 
-set -xue -o pipefail
+mkdir -p "$WORKDIR"
+mkdir -p "$OUTDIR"
+mkdir -p "$LOGDIR"
+
 
 while (( cycles < infinity )) && ! download_hfsa_grib ; do
     echo "Waiting for HFSA files at" $( date )

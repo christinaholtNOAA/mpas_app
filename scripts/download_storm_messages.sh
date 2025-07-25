@@ -1,5 +1,6 @@
 #! /bin/bash
 
+set -xue -o pipefail
 source "$INSTALLDIR/parm/paths.sh"
 source "$INSTALLDIR/scripts/grabNpost.sh"
 
@@ -11,6 +12,10 @@ export TZ=UTC
 naptime=120 # seconds
 infinity=100 # infinite loop guard
 cycles=1
+
+mkdir -p "$WORKDIR"
+mkdir -p "$OUTDIR"
+mkdir -p "$LOGDIR"
 
 while (( cycles < infinity )) && ! download_storm_messages ; do
     echo "Waiting for storm message files at" $( date )

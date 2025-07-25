@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=00:30:00
+#SBATCH --mem=1G
+#SBATCH -A wrfruc
+#SBATCH -q debug
+#SBATCH --partition u1-service
+
+module purge
+module use /scratch3/BMC/wrfruc/Samuel.Trahan/mpashfip/upp-f10m/modulefiles
+module load ursa_intelllvm
+module list
+
+set -xue
+ulimit -s unlimited
+
+date
+
+source ./grabNpost.sh
+
+set_vars_for_cycle "$ATIME"
+download_gfs_0p25
+download_gfs_sfc
+download_gfs_atm
+download_storm_messages
+download_hfsa_grib
+
+date
+echo normal completion

@@ -1,7 +1,7 @@
 
 workflow:
-  entites:
-    WORKDIR: "{{ user.experiment_dir }}/@Y@m@d@H/work_prep"
+  entities:
+    WORKDIR_PREPROC: "{{ user.experiment_dir }}/@Y@m@d@H/work_prep"
   tasks:
     metatask_download:
       var:
@@ -23,13 +23,13 @@ workflow:
               value: "@Y-@m-@d_@H:00:00"
           OUTDIR:
             cyclestr:
-              value: "{{ user.experiment_dir }}/@Y@m@d@H/#datum#"
+              value: "{{ user.experiment_dir }}/@Y@m@d@H/downloaded_data"
           LOGDIR:
             cyclestr:
-              value: "{{ user.experiment_dir }}/@Y@m@d@H/#datum#"
+              value: "{{ user.experiment_dir }}/@Y@m@d@H/preproc_log"
           WORKDIR:
             cyclestr:
-              value: "&WORKDIR;"
+              value: "&WORKDIR_PREPROC;"
           INSTALLDIR: "{{ user.mpas_app }}"
         dependency:
           timedep:
@@ -40,13 +40,15 @@ workflow:
     task_run_upp_hfip_pre:
       attrs:
         maxtries: 3
-      command: 'source &MPAS_APP;/load_wflow_modules.sh &PLATFORM; && &MPAS_APP;/scripts/upp.py
+      command:
+        cyclestr:
+          value: 'source &MPAS_APP;/load_wflow_modules.sh &PLATFORM; && &MPAS_APP;/scripts/upp.py
               -c &EXPERIMENT_CONFIG;
               --cycle @Y-@m-@dT@H:@M:@S
-              --leadtime #fhr#
-              --key-path hfip_preproc_upp'
+              --leadtime 0
+              --key-path hfip_preproc'
       walltime: 00:10:00
-      nodes: "1:ppn=192"
+      nodes: "{{ hfip_preproc.upp.execution.batchargs.nodes }}:ppn={{ hfip_preproc.upp.execution.batchargs.tasks_per_node }}"
       account: "{{ platform.account }}"
       join:
         cyclestr:
@@ -81,11 +83,11 @@ workflow:
               task: download_gfs_0p25
           taskdep_hfsa_grib:
             attrs:
-              task: download_gfs_hfsa_grib
+              task: download_hfsa_grib
     task_choose_storm:
       attrs:
         maxtries: 3
-      command: "{{ user.mpas_app }}/scripts/choose_storm.sh"
+      command: "{{ user.mpas_app }}/scripts/choose_storm_wrapper.sh"
       walltime: 00:05:00
       cores: 1
       account: "{{ platform.account }}"
@@ -107,7 +109,7 @@ workflow:
         maxtries: 3
       command:
         cyclestr:
-          value: "set -xue && rm -r &WORKDIR;/*.grib2 && echo normal completion"
+          value: "set -xue && rm -r &WORKDIR_PREPROC;/*.grib2 && echo normal completion"
       walltime: 00:05:00
       cores: 1
       partition: "{{ platform.service_partition }}"

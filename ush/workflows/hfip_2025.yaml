@@ -6,22 +6,20 @@ user:
   mesh_label: x5.8060930
   workflow_blocks:
     - cold_start.yaml
-    - hfip_preproc.yaml
     - post.yaml
     - graphics.yaml
 
 workflow:
   tasks:
-    task_get_ics_data: !remove
     task_get_lbcs_data: !remove
     task_ungrib_lbcs: !remove
     task_mpas_lbcs: !remove
-    task_ungrib_ics:
-      dependency:
-        taskdep: !remove
-        taskdep_choose_storm:
-          attrs:
-            task: choose_storm
+      #    task_ungrib_ics:
+      #      dependency:
+      #        taskdep: !remove
+      #        taskdep_choose_storm:
+      #          attrs:
+      #            task: choose_storm
     task_mpas:
       dependency:
         taskdep:
@@ -33,6 +31,47 @@ workflow:
           cyclestr:
             value: 'cd {{ user.experiment_dir }}/@Y@m@d@H/upp/#fhr# && FHR=$( printf "%02d" "$((10##fhr#))") && cat PRSLEV.GrbF$FHR NATLEV.GrbF$FHR 2DFLD.GrbF$FHR >> ../COMBINED.GrbF$FHR'
 
+hfip_preproc:
+  upp:
+    # upp settings follow UW Tools driver YAML
+    control_file: "{{ user.mpas_app }}/parm/upp/postxconfig-NT-minimal.txt"
+    execution:
+      batchargs:
+        walltime: 00:10:00
+        nodes: 1
+        tasks_per_node: 192
+      envcmds:
+        - ulimit -s unlimited || true
+        - module use {{ user.mpas_app }}/src/UPP/modulefiles
+        - module load {{ user.platform }}_intel
+      executable: "{{ user.mpas_app }}/exec/upp.x"
+      mpicmd: srun
+    files_to_copy:
+      postxconfig-NT.txt: "{{ hfip_preproc.upp.control_file }}"
+    files_to_link:
+      eta_micro_lookup.dat: "{{ user.mpas_app }}/parm/upp/nam_micro_lookup.dat"
+      params_grib2_tbl_new: "{{ user.mpas_app }}/src/UPP/parm/params_grib2_tbl_new"
+    namelist:
+      update_values:
+        model_inputs:
+          filename: "{{ user.experiment_dir }}/{{ cycle.strftime('%Y%m%d%H') }}/downloaded_data/gfs.t{{ cycle.strftime('%H') }}z.atmf000.nc"
+          ioform: netcdf
+          grib: grib2
+          datestr: "{{ (cycle + leadtime).strftime('%Y-%m-%d_%H:%M:%S') }}"
+          modelname: GFS
+          filenameflux: "{{ hfip_preproc.upp.namelist.update_values.model_inputs.filename }}"
+          filenameflat: "{{ hfip_preproc.upp.files_to_copy['postxconfig-NT.txt'] }}"
+        nampgb:
+          kpo: 57
+          numx: 2
+          rdaod: true
+          po: [1000.,975.,950.,925.,900.,875.,850.,825.,800.,775.,750.,725.,700.,675.,650.,625.,600.,575.,550.,525.,500.,475.,450.,425.,400.,375.,350.,325.,300.,275.,250.,225.,200.,175.,150.,125.,100.,70.,50.,40.,30.,20.,15.,10.,7.,5.,3.,2.,1.,0.7,0.4,0.2,0.1,0.07,0.04,0.02,0.01]
+    rundir: '{{ user.experiment_dir }}/{{ cycle.strftime("%Y%m%d%H") }}/preproc_upp/{{ "%03d" % (leadtime.total_seconds() / 3600) }}'
+
+      #prepare_grib_ics:
+      #  ungrib:
+      #    gribfiles:
+      #      path: '{{ user.experiment_dir }}/{{ cycle.strftime("%Y%m%d%H") }}/downloaded_data/merged-by-field'
 create_ics:
   mpas_init: &mpas_init
     files_to_copy:
@@ -46,9 +85,14 @@ create_ics:
     namelist:
       update_values:
         data_sources:
+          config_soilcat_data: STASGO
           config_use_spechumd: true
+          config_lu_supersample_factor: !remove
+        interpolation_control:
+          config_extrap_airtemp: linear
         dimensions:
           config_nvertlevels: 79
+          config_nfglevels: 34
           config_nsoillevels: 4
           config_nvegopt: 1
         vertical_grid:

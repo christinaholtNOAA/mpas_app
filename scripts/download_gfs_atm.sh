@@ -1,5 +1,6 @@
-#! /bin/bash
+#!/bin/bash
 
+set -xue -o pipefail
 source "$INSTALLDIR/parm/paths.sh"
 source "$INSTALLDIR/scripts/grabNpost.sh"
 
@@ -12,7 +13,9 @@ naptime=120 # seconds
 infinity=100 # infinite loop guard
 cycles=1
 
-set -xue -o pipefail
+mkdir -p "$WORKDIR"
+mkdir -p "$OUTDIR"
+mkdir -p "$LOGDIR"
 
 while (( cycles < infinity )) && ! ( check_for_gfs_atm && download_gfs_atm ) ; do
     echo "Waiting for GFS atm files at" $( date )

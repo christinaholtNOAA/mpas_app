@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 
 source "$INSTALLDIR/parm/paths.sh"
 source "$INSTALLDIR/scripts/grabNpost.sh"
@@ -13,6 +13,10 @@ export TZ=UTC
 naptime=120 # seconds
 infinity=100 # infinite loop guard
 cycles=1
+
+mkdir -p "$WORKDIR"
+mkdir -p "$OUTDIR"
+mkdir -p "$LOGDIR"
 
 while (( cycles < infinity )) && ! ( check_for_gfs_0p25 && download_gfs_0p25 ) ; do
     echo "Waiting for GFS 0p25 files at" $( date )

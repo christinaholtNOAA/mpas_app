@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 
 # This is a library of shell functions. It should be sourced, not executed.
 
@@ -152,6 +152,7 @@ link_downloaded_files() {
     local copy
     ln -sf "$outdir"/*grb2* "$outdir"/*.nc* .
     ln -sf "$fix_hires" "$hires"
+    ln -sf $outdir/../preproc_upp/000/HURPRS.GrbF00 .
 }
 
 wgrib2_inventory() {
