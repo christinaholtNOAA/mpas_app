@@ -4,16 +4,16 @@ workflow:
       var:
         fhr: "{% for h in range(0, forecast.mpas['length'] + 1, 6) %}{{ ' %03d' % h }}{% endfor %}"
       task_mpassit_#fhr#:
+        attrs:
+          maxtries: 3
         account: "{{ platform.account }}"
-        command: 'source &MPAS_APP;/load_wflow_modules.sh &PLATFORM; && &MPAS_APP;/scripts/mpassit.sh
-          -m {{ user.mpas_app }}/src/MPASSIT/modulefiles/build.{{ user.platform }}.intel{{ "-llvm" if user.platform == "ursa" else "" }}
-          -w {{ user.experiment_dir }}/${CYCLE}/mpassit
-          -f #fhr#
-          -i ${CYCLE}
-          -x {{ post.mpassit.fixdir }}
-          -n {{ post.mpassit.nmldir }}
-          -p {{ post.mpassit.parmdir }}
-          -e {{ user.mpas_app }}/exec'
+        command:
+          cyclestr:
+            value: 'source &MPAS_APP;/load_wflow_modules.sh &PLATFORM; && &MPAS_APP;/scripts/mpassit.py
+              -c &EXPERIMENT_CONFIG;
+              --cycle @Y-@m-@dT@H:@M:@S
+              --leadtime #fhr#
+              --key-path post'
         envars:
           CYCLE:
             cyclestr:
@@ -45,6 +45,8 @@ workflow:
                   value: 'fh=$((10##fhr# + 6 )) ; timestamp=$(date -d "@H:@M:@S @Y-@m-@d +$fh hour" "+%F_%T" ) ; find {{ user.experiment_dir }}/@Y@m@d@H/forecast/[dh]*.${timestamp}.nc 2>/dev/null |  test $(wc -l) == 2'
 
       task_upp_#fhr#:
+        attrs:
+          maxtries: 3
         command:
           cyclestr:
             value: 'source &MPAS_APP;/load_wflow_modules.sh &PLATFORM; && &MPAS_APP;/scripts/upp.py
@@ -66,6 +68,8 @@ workflow:
               task: mpassit_#fhr#
 
       task_combine_grib_#fhr#:
+        attrs:
+          maxtries: 3
         account: "{{ platform.account }}"
         command:
           cyclestr:

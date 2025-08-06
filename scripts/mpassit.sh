@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+ulimit -s unlimited
+
 # Default settings
 MODULE_FILE="/path/to/default/modulefile"
 WORK_DIR="/default/work/dir"

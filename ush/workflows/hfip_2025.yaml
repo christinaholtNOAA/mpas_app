@@ -28,13 +28,13 @@ workflow:
 create_ics:
   mpas_init: &mpas_init
     files_to_copy:
-      QNWFA_QNIFA_SIGMA_MONTHLY.dat: "{{ platform.hrrr_fix }}/../QNWFA_QNIFA_SIGMA_MONTHLY.dat"
+      QNWFA_QNIFA_SIGMA_MONTHLY.dat: "{{ platform.hrrr_fix }}/QNWFA_QNIFA_SIGMA_MONTHLY.dat"
       stream_list.atmosphere.diag_ugwp: "{{ user.mpas_app }}/parm/mpas/hfip_2025/stream_list.atmosphere.diag_ugwp"
       stream_list.atmosphere.diagnostics: "{{ user.mpas_app }}/parm/mpas/hfip_2025/stream_list.atmosphere.diagnostics"
       stream_list.atmosphere.output: "{{ user.mpas_app }}/parm/mpas/hfip_2025/stream_list.atmosphere.output"
       stream_list.atmosphere.surface: "{{ user.mpas_app }}/parm/mpas/hfip_2025/stream_list.atmosphere.surface"
     files_to_link:
-      "{{ user.mesh_label }}.ugwp_oro_data.nc": "{{ platform.hrrr_fix }}/{{ user.mesh_label }}.ugwp_oro_data.nc" 
+      "{{ user.mesh_label }}.ugwp_oro_data.nc": "{{ data.mesh_files }}/{{ user.mesh_label }}.ugwp_oro_data.nc" 
     namelist:
       update_values:
         data_sources:
@@ -61,7 +61,7 @@ forecast:
       stream_list.atmosphere.surface: "{{ user.mpas_app }}/parm/mpas/hfip_2025/stream_list.atmosphere.surface"
     files_to_link:
       CCN_ACTIVATE.BIN: !remove
-      "{{ user.mesh_label }}.ugwp_oro_data.nc": "{{ platform.hrrr_fix }}/{{ user.mesh_label }}.ugwp_oro_data.nc" 
+      "{{ user.mesh_label }}.ugwp_oro_data.nc": "{{ data.mesh_files }}/{{ user.mesh_label }}.ugwp_oro_data.nc" 
       "NoahmpTable.TBL": "{{ user.mpas_app }}/src/MPAS-Model/NoahmpTable.TBL"
     namelist:
       update_values:
@@ -116,17 +116,24 @@ forecast:
 
 post:
   mpassit:
-    nmldir: '{{ user.mpas_app }}/parm/mpassit/hfip_2025'
-    parmdir: '{{ user.mpas_app }}/parm/mpassit/hfip_2025'
+    namelist:
+      update_values:
+        config:
+          is_regional: false
+          nx: 3000
+          ny: 2200
+          dx: 3000.0
+          dy: 3000.0
+          ref_lat: 30.0
+          ref_lon: -55.0
+          truelat1: 30.0
+          truelat2: 30.0
+          stand_lon: -55.0
   upp:
     control_file: "{{ user.mpas_app }}/parm/upp/postxconfig-NT-hfip_mpas.txt"
     files_to_copy:
       postxconfig-NT.txt: "{{ user.mpas_app }}/parm/upp/postxconfig-NT-hfip_mpas.txt"
 graphics:
-  execution:
-    batchargs:
-      tasks_per_node: 192
-      nodes: 1
   config:
     identifier: HFIP Experimental
     image_list: "{{ user.mpas_app }}/parm/pygraf/hfip_subset.yml"

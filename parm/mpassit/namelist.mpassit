@@ -10,10 +10,10 @@
     wrf_mod_vars         = .true.
     esmf_log             = .false.
     target_grid_type = "lambert"
-    nx = 1800
-    ny = 1060
-    dx =3000.0
-    dy =3000.0
+    nx = 180
+    ny = 106
+    dx =30000.0
+    dy =30000.0
     ref_lat = 38.5
     ref_lon = -97.5
     truelat1 = 38.5
