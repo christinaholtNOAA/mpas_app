@@ -1,0 +1,5 @@
+outs:
+- md5: 966382a3fdd8e2844698a18372f95ae5
+  size: 48240
+  hash: md5
+  path: conus.2562.ugwp_oro_data.nc

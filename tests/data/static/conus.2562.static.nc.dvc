@@ -1,0 +1,5 @@
+outs:
+- md5: f01f8e141ab45183b33ea224faea3916
+  size: 1092200
+  hash: md5
+  path: conus.2562.static.nc

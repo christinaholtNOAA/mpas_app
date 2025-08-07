@@ -1,0 +1,5 @@
+outs:
+- md5: d93ffd83f697c96eebdf7e249bbd7dbe
+  size: 743804
+  hash: md5
+  path: conus.2562.grid.nc
