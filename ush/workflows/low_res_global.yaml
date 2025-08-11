@@ -1,0 +1,47 @@
+user:
+  mesh_label: global.2562
+data:
+  mesh_files: '{{ user.mpas_app }}/tests/data/static'
+create_ics:
+  mpas_init:
+    execution:
+      batchargs:
+        cores: 12
+    files_to_copy:
+      "{{ user.mesh_label }}.static.nc": "{{ data.mesh_files }}/{{ user.mesh_label }}.static.nc"
+    files_to_link:
+      "{{ user.mesh_label }}.ugwp_oro_data.nc": "{{ data.mesh_files }}/{{ user.mesh_label }}.ugwp_oro_data.nc"
+forecast:
+  mpas:
+    execution:
+      batchargs:
+        cores: 40
+        walltime: 00:05:00
+    length: 6
+    namelist:
+      update_values:
+        nhyd_model:
+          config_dt: 120.0
+        io: !remove
+    files_to_copy:
+      "{{ user.mesh_label }}.static.nc": "{{ data.mesh_files }}/{{ user.mesh_label }}.static.nc"
+    files_to_link:
+      "{{ user.mesh_label }}.ugwp_oro_data.nc": "{{ data.mesh_files }}/{{ user.mesh_label }}.ugwp_oro_data.nc"
+post:
+  mpassit:
+    execution:
+      batchargs:
+        cores: 12
+        nodes: 1
+    namelist:
+      update_values:
+        config:
+          nx: 180
+          ny: 106
+          dx: 3000.0
+          dy: 3000.0
+  upp:
+    execution:
+      batchargs:
+        nodes: 1
+        tasks_per_node: 12
