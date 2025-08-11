@@ -1,0 +1,10 @@
+The conus cutout was prepared from the global x1.22562 grid using the MPAS-Limited-Area utility
+(edc556e174) using the following custom points:
+
+Name: conus.2562
+Type: custom
+Point: 40.0, -100.0
+50.0, -129.0
+48.0, -65.0
+22.0, -69.0
+22.0, -125.0
