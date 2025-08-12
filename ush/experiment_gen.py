@@ -58,11 +58,8 @@ def generate_workflow_files(
     for config in (experiment_config, user_config):
         workflow_config.update_from(config)
     validate_driver_blocks(validated.user.driver_validation_blocks, workflow_config)
-    realize(
-        input_config=workflow_config,
-        output_file=experiment_file,
-        update_config={"user": {"mpas_app": str(mpas_app)}},
-    )
+    workflow_config.dereference()
+    workflow_config.dump(experiment_file)
     rocoto_xml = experiment_file.parent / "rocoto.xml"
     rocoto_valid = rocoto.realize(config=experiment_file, output_file=rocoto_xml)
     if not rocoto_valid:
@@ -106,6 +103,7 @@ def prepare_configs(user_config_files: list[Path]) -> tuple[YAMLConfig, YAMLConf
         user_config.update_from(cfg)
         experiment_config.update_from(cfg)
     mpas_app = Path(__file__).parent.parent.resolve()
+    experiment_config.update_from({"user": {"mpas_app": str(mpas_app)}})
     machine = experiment_config["user"]["platform"]
     platform_config = get_yaml_config(mpas_app / "parm" / "machines" / f"{machine}.yaml")
 

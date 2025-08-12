@@ -25,6 +25,7 @@ user:
     offset_hours: 0
   forecast:
     output_interval: 6
+    length: !timedelta 6
   mesh_label: hrrrv5
   platform: big_computer
   workflow_blocks:
@@ -59,11 +60,11 @@ prepare_grib_ics:
         - source {{ user.mpas_app }}/load_wflow_modules.sh {{ user.platform }}
         - conda activate ungrib
       executable: ungrib
-    gribfiles:
-      interval_hours: 1
-      max_leadtime: 0
-      offset: !int "{{ user.ics.offset_hours }}"
-      path: /path/to/user/grib/files
+    start: '{{ cycle.isoformat(timespec="seconds") }}'
+    step: 999
+    stop: '{{ cycle.isoformat(timespec="seconds") }}'
+    gribfiles: 
+      - '{{ get_ics_data.rundir }}/gfs.t{{ cycle.strftime("%H") }}z.pgrb2.0p25.f000'
     rundir: '{{ user.experiment_dir }}/{{ cycle.strftime("%Y%m%d%H") }}/ungrib_ics'
     vtable: /path/to/user/vtable
   platform:
@@ -86,11 +87,10 @@ prepare_grib_lbcs:
         - source {{ user.mpas_app }}/load_wflow_modules.sh {{ user.platform }}
         - conda activate ungrib
       executable: ungrib
-    gribfiles:
-      interval_hours: !int '{{ user.lbcs.interval_hours }}'
-      max_leadtime: !int "{{ forecast.mpas.length }}" 
-      offset: !int "{{ user.lbcs.offset_hours }}"
-      path: /path/to/user/grib/files
+    gribfiles: !list '{% for fhr in range(user.lbcs.interval_hours, forecast.mpas.length, user.lbcs.interval_hours) %}{{ get_lbcs_data.rundir }}/gfs.t{{ cycle.strftime("%H") }}z.pgrb2.0p25.f{{ "%03d" % fhr }}{% endfor %}'
+    start: '{{ (cycle + step).isoformat(timespec="seconds") }}'
+    step: !timedelta '{{ user.lbcs.interval_hours}}'
+    stop: '{{ (cycle + user.forecast.length).isoformat(timespec="seconds") }}'
     rundir: '{{ user.experiment_dir }}/{{ cycle.strftime("%Y%m%d%H") }}/ungrib_lbcs'
     vtable: /path/to/user/vtable
   platform:
@@ -136,7 +136,7 @@ create_ics:
       RRTMG_SW_DATA.DBL: "{{ user.mpas_app }}/src/MPAS-Model/RRTMG_SW_DATA.DBL"
       SOILPARM.TBL: "{{ user.mpas_app }}/src/MPAS-Model/SOILPARM.TBL"
       VEGPARM.TBL: "{{ user.mpas_app }}/src/MPAS-Model/VEGPARM.TBL"
-      QNWFA_QNIFA_SIGMA_MONTHLY.dat: "{{ data.mesh_files }}/QNWFA_QNIFA_SIGMA_MONTHLY.dat"
+      QNWFA_QNIFA_SIGMA_MONTHLY.dat: "{{ platform.hrrr_fix }}/QNWFA_QNIFA_SIGMA_MONTHLY.dat"
     namelist:
       base_file: "{{ user.mpas_app }}/src/MPAS-Model/namelist.init_atmosphere"
       update_values: &mpas_init_update_values
@@ -257,7 +257,7 @@ forecast:
       interval_hours: !int "{{ user.lbcs.interval_hours }}"
       offset: 0
       path: "{{ create_lbcs.mpas_init.rundir }}"
-    length: 6
+    length: !int "{{ user.forecast.length.total_seconds() // 3600 }}"
     namelist:
       base_file: "{{ user.mpas_app }}/src/MPAS-Model/namelist.atmosphere"
       update_values:

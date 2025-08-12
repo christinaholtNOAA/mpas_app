@@ -3,8 +3,6 @@ GFS:
   ics:
     prepare_grib_ics: &prepare_grib_gfs
       ungrib:
-        gribfiles:
-          path: "{{ get_lbcs_data.rundir }}/gfs.t{cycle_hour:02d}z.pgrb2.0p25.f{forecast_hour:03d}"
         vtable: "{{ user.mpas_app }}/parm/ungrib/Vtable.GFS"
     create_ics: &init_gfs
       mpas_init:
