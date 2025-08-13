@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import ANY, call, patch
 
 import iotaa
@@ -9,7 +9,12 @@ from scripts import ungrib
 
 
 @fixture
-def ungrib_config(tmp_path):
+def cycle():
+    return datetime(2025, 1, 1, 12, tzinfo=timezone.utc).replace(tzinfo=None)
+
+
+@fixture
+def ungrib_config(cycle, tmp_path):
     tmp_input = tmp_path / "input_data"
     tmp_input.mkdir()
     return get_yaml_config(
@@ -19,12 +24,10 @@ def ungrib_config(tmp_path):
                 "ungrib": {
                     "rundir": str(tmp_path),
                     "execution": {"executable": "/path/to/ungrib.exe"},
-                    "gribfiles": {
-                        "interval_hours": 1,
-                        "max_leadtime": 3,
-                        "offset": 0,
-                        "path": str(tmp_path / "input_data"),
-                    },
+                    "start": cycle.isoformat(timespec="seconds"),
+                    "step": timedelta(hours=1),
+                    "stop": (cycle + timedelta(hours=3)).isoformat(timespec="seconds"),
+                    "gribfiles": [str(tmp_path / f"input_data{i}") for i in range(4)],
                     "vtable": "/path/to/vtable",
                 },
                 "wgrib2": {},
@@ -34,8 +37,7 @@ def ungrib_config(tmp_path):
 
 
 @fixture
-def ungrib_driver(ungrib_config):
-    cycle = datetime(2025, 1, 1, 12, tzinfo=timezone.utc)
+def ungrib_driver(cycle, ungrib_config):
     return ungrib.Ungrib(config=ungrib_config, cycle=cycle, key_path=["ungrib_ics"])
 
 

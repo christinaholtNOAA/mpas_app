@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import sys
 from argparse import ArgumentParser, Namespace
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 

@@ -147,7 +147,6 @@ def test_generate_workflow_files_failure(tmp_path, test_config, validated_config
     with (
         patch.object(experiment_gen, "get_yaml_config", return_value=YAMLConfig(test_config)),
         patch.object(experiment_gen, "validate_driver_blocks"),
-        patch.object(experiment_gen, "realize"),
         patch.object(experiment_gen.rocoto, "realize", return_value=False),
         patch("sys.exit") as sysexit,
     ):

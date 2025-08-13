@@ -36,7 +36,7 @@ def test_parse_args():
     ]
     args = common.parse_args(argv)
     assert args.config_file == Path("config.yaml")
-    assert args.cycle == datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+    assert args.cycle == datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc).replace(tzinfo=None)
     assert args.leadtime == timedelta(seconds=21600)
     assert args.key_path == ["forecast", "model"]
 

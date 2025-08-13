@@ -14,7 +14,7 @@ from shutil import copy
 from subprocess import STDOUT, CalledProcessError, check_output
 
 from uwtools.api import rocoto
-from uwtools.api.config import YAMLConfig, get_yaml_config, realize
+from uwtools.api.config import YAMLConfig, get_yaml_config
 from uwtools.api.driver import yaml_keys_to_classes
 from uwtools.api.logging import use_uwtools_logger
 
