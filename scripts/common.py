@@ -61,4 +61,4 @@ def run_component(
 
 
 def _utc(date_string) -> datetime:
-    return datetime.fromisoformat(date_string)
+    return datetime.fromisoformat(date_string).replace(tzinfo=None)

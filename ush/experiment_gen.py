@@ -111,7 +111,7 @@ def prepare_configs(user_config_files: list[Path]) -> tuple[YAMLConfig, YAMLConf
     external_model_config = get_yaml_config(mpas_app / "ush" / "external_model_config.yaml")
     for bcs in ("ics", "lbcs"):
         model = experiment_config["user"][bcs]["external_model"]
-        bcs_config = external_model_config[model][bcs]
+        bcs_config = get_yaml_config(external_model_config[model][bcs])
         experiment_config.update_from(bcs_config)
 
     # Make sure user_config is last to override any settings from supplementals
@@ -172,6 +172,7 @@ def validate_driver_blocks(validated_blocks: list[str], workflow_config: YAMLCon
     """
     yaml_to_class_map = yaml_keys_to_classes()
     for block in validated_blocks:
+        logging.info(block)
         section, driver_name = block.rsplit(".", 1)
         driver_class = yaml_to_class_map[driver_name]
         kwargs = {

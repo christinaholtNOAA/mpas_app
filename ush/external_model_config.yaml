@@ -20,10 +20,10 @@ GFS:
 
 RAP:
   ics:
-    prepare_grib_ics: &prepare_grib_rap
-      ungrib:
+    prepare_grib_ics:
+      ungrib: &ungrib_rap
         gribfiles:
-          path: '{{ get_lbcs_data.rundir }}/rap.t{cycle_hour:02d}z.wrfnatf{forecast_hour:02d}.grib2'
+          - '{{ get_lbcs_data.rundir }}/rap.t{{ cycle.strftime("%H") }}z.wrfnatf00.grib2'
         vtable: "{{ user.mpas_app }}/parm/ungrib/Vtable.raphrrr"
     create_ics: &init_rap
       mpas_init:
@@ -34,7 +34,9 @@ RAP:
               config_nfgsoillevels: 9
   lbcs:
     prepare_grib_lbcs:
-      <<: *prepare_grib_rap
+      ungrib:
+        vtable: "{{ user.mpas_app }}/parm/ungrib/Vtable.raphrrr"
+        gribfiles: !list "[{% for fhr in range(0, forecast.mpas.length + 1, user.lbcs.interval_hours) %}{{ get_lbcs_data.rundir }}/rap.t{{ cycle.strftime('%H') }}z.wrfnatf{{ '%02d' % fhr }}.grib2,{% endfor %}]"
     create_lbcs:
       <<: *init_rap
 
@@ -44,16 +46,16 @@ RRFS:
       tasks:
         task_get_ics_data:
           memory: 30G
-    prepare_grib_ics: &prepare_grib_rrfs
-      ungrib:
+    prepare_grib_ics:
+      ungrib: &ungrib_rrfs
         execution:
           batchargs:
             walltime: 00:30:00
             memory: 30G
         gribfiles:
-          path: '{{ get_lbcs_data.rundir }}/rrfs.t{cycle_hour:02d}z.natlev.3km.f{forecast_hour:03d}.na.grib2'
+          - '{{ get_lbcs_data.rundir }}/rrfs.t{{ cycle.strftime("%H") }}z.natlev.3km.f000.na.grib2'
         vtable: "{{ user.mpas_app }}/parm/ungrib/Vtable.RRFS"
-      wgrib2:
+      wgrib2: &wgrib2_rrfs
         budget_fields: '{{ data.mesh_files }}/budget_fields.txt'
         neighbor_fields: '{{ data.mesh_files }}/neighbor_fields.txt'
         grid_specs: "lambert:266:25.000000 234.862000:2000:3000.000000 18.281000:1450:3000.000000"
@@ -74,6 +76,10 @@ RRFS:
         task_get_lbcs_data:
           memory: 30G
     prepare_grib_lbcs:
-      <<: *prepare_grib_rrfs
+      ungrib:
+        <<: *ungrib_rrfs
+        gribfiles: !list '[{% for fhr in range(0, forecast.mpas.length + 1, user.lbcs.interval_hours) %}{{ get_lbcs_data.rundir }}/rrfs.t{{ cycle.strftime("%H") }}z.natlev.3km.f{{ "%03d" % fhr }}.na.grib2,{% endfor %}]'
+      wgrib2:
+        <<: *wgrib2_rrfs
     create_lbcs:
       <<: *init_rrfs
