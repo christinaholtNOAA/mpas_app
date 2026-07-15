@@ -134,6 +134,7 @@ create_ics:
   # mpas_init settings follow UW Tools driver YAML
   mpas_init: &mpas_init_config
     boundary_conditions:
+      start: !int "{{ user.ics.offset_hours }}"
       interval_hours: 2
       length: !int "{{ user.ics.offset_hours }}"
       offset: !int "{{ user.ics.offset_hours }}"
@@ -218,6 +219,7 @@ create_lbcs:
   mpas_init:
     <<: *mpas_init_config
     boundary_conditions:
+      start: 0
       interval_hours: !int "{{ user.lbcs.interval_hours }}"
       length: !int "{{ forecast.mpas.length }}"
       offset: 0

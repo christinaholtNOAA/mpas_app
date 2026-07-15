@@ -89,6 +89,10 @@ create_ics:
 create_lbcs:
   mpas_init:
     <<: *mpas_init
+    boundary_conditions:
+      start: !int "{{ user.lbcs.interval_hours }}"
+    files_to_link:
+      './FILE:{{ cycle.strftime("%Y-%m-%d_%H") }}': '{{ prepare_grib_ics.ungrib.rundir }}/FILE:{{ cycle.strftime("%Y-%m-%d_%H") }}'
     namelist:
       update_values:
         <<: *init_update
