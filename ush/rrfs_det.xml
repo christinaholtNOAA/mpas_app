@@ -1,0 +1,1878 @@
+<?xml version="1.0"?>
+<!DOCTYPE wflow [
+
+<!ENTITY ACCOUNT         "rtwrfruc">
+<!ENTITY QUEUE_DEFAULT   "hpq">
+<!ENTITY PARTITION       "u1-compute">
+
+<!ENTITY MACHINE         "ursa">
+<!ENTITY HOMErrfs        "/scratch3/BMC/rtwrfruc/RRFSv2X/code/rrfs-workflow.20260803">
+<!ENTITY EXPDIR          "/scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/exp/rrfsdet">
+<!ENTITY DATAROOT        "/scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/stmp">
+<!ENTITY COMROOT         "/scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/com">
+<!ENTITY LOGROOT         "/scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/com/rrfs/v2.1.4/logs">
+
+<!ENTITY RUN             "rrfs">
+<!ENTITY NET             "rrfs">
+<!ENTITY rrfs_ver        "v2.1.4">
+<!ENTITY WGF             "det">
+
+<!ENTITY task_common_vars
+"
+<envar><name>MACHINE</name><value>&MACHINE;</value></envar>
+<envar><name>HOMErrfs</name><value>&HOMErrfs;</value></envar>
+<envar><name>EXPDIR</name><value>&EXPDIR;</value></envar>
+<envar><name>COMROOT</name><value>&COMROOT;</value></envar>
+<envar><name>DATAROOT</name><value><cyclestr>&DATAROOT;/@Y@m@d</cyclestr></value></envar>
+<envar><name>COMINrrfs</name><value>&COMROOT;/rrfs/v2.1.4</value></envar>
+<envar><name>COMOUT</name><value><cyclestr>&COMROOT;/rrfs/v2.1.4/rrfs.@Y@m@d/@H</cyclestr></value></envar>
+<envar><name>CDATE</name><value><cyclestr>@Y@m@d@H</cyclestr></value></envar>
+<envar><name>PDY</name><value><cyclestr>@Y@m@d</cyclestr></value></envar>
+<envar><name>cyc</name><value><cyclestr>@H</cyclestr></value></envar>
+<envar><name>NET</name><value>rrfs</value></envar>
+<envar><name>RUN</name><value>rrfs</value></envar>
+<envar><name>rrfs_ver</name><value>v2.1.4</value></envar>
+<envar><name>MPI_RUN_CMD</name><value>srun</value></envar>
+<envar><name>MESH_NAME</name><value>conus3km</value></envar>
+<envar><name>WGF</name><value>det</value></envar>
+<envar><name>CYC_INTERVAL</name><value>1</value></envar>
+"
+>
+
+<!ENTITY Y1 "2026">
+<!ENTITY M1 "08">
+<!ENTITY D1 "03">
+
+<!ENTITY Y2 "2026">
+<!ENTITY M2 "09">
+<!ENTITY D2 "30">
+]>
+
+<workflow realtime="T" scheduler="slurm" cyclethrottle="3600" cyclelifespan="2:00:00:00">
+  <log verbosity="10"><cyclestr>&LOGROOT;/&RUN;.@Y@m@d/@H/&WGF;/&RUN;.log</cyclestr></log>
+
+  <cycledef group="ic">  &Y1;&M1;&D1;0300 &Y2;&M2;&D2;2300 12:00:00</cycledef>
+  <cycledef group="lbc"> &Y1;&M1;&D1;0000 &Y2;&M2;&D2;2300 12:00:00</cycledef>
+  <cycledef group="prod">&Y1;&M1;&D1;0000 &Y2;&M2;&D2;2300 01:00:00</cycledef>
+  <cycledef group="spinup" valid_hours="3 4 5 6 7 8 15 16 17 18 19 20">&Y1;&M1;&D1;0000 &Y2;&M2;&D2;2300 01:00:00</cycledef>
+  <cycledef group="archive">&Y1;&M1;&D1;0000 &Y2;&M2;&D2;2300 01:00:00</cycledef>
+  <cycledef group="post01" valid_hours="0 3 6 9 12 15 18 21">&Y1;&M1;&D1;0000 &Y2;&M2;&D2;2300 01:00:00</cycledef>
+  <cycledef group="post02" valid_hours="0 12">&Y1;&M1;&D1;0000 &Y2;&M2;&D2;2300 01:00:00</cycledef>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="ioda_bufr" cycledefs="prod,spinup" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_IODA_BUFR</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_ioda_bufr_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_ioda_bufr_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:50:00</walltime>
+  <nodes>1:ppn=1</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>REFERENCE_TIME</name><value>@Y-@m-@dT@H:00:00Z</value></envar>
+  <envar><name>YAML_GEN_METHOD</name><value>1</value></envar>
+  <envar><name>OBSPATH</name><value>/public/data/grids/rap/obs</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:40:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <datadep age="00:02:00"><cyclestr>/public/data/grids/rap/obs/@Y@m@d@H.rap.t@Hz.prepbufr.tm00</cyclestr></datadep>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="ioda_mrms_refl" cycledefs="prod,spinup" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_IODA_MRMS_REFL</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_ioda_mrms_refl_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_ioda_mrms_refl_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:50:00</walltime>
+  <nodes>1:ppn=40</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>REFERENCE_TIME</name><value>@Y-@m-@dT@H:00:00Z</value></envar>
+  <envar><name>OBSPATH_NSSLMOSIAC</name><value>/public/data/radar/mrms</value></envar>
+  <envar><name>RADARREFL_TIMELEVEL</name><value>00</value></envar>
+  <envar><name>MRMS_GRIDSPACINGDEG</name><value>0.03</value></envar>
+  <envar><name>ASSIM_METHOD</name><value>jedivar</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+    
+    <timedep><cyclestr offset="00:40:00">@Y@m@d@H@M00</cyclestr></timedep>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="nonvar_bufrobs" cycledefs="prod,spinup" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_NONVAR_BUFROBS</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_nonvar_bufrobs_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_nonvar_bufrobs_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:25:00</walltime>
+  <nodes>1:ppn=1</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>REFERENCE_TIME</name><value>@Y-@m-@dT@H:00:00Z</value></envar>
+  <envar><name>OBSPATH</name><value>/public/data/grids/rap/obs</value></envar>
+  <envar><name>NONVAR_LARC_NPTS</name><value>3</value></envar>
+  <envar><name>NONVAR_METAR_IMPACT</name><value>20</value></envar>
+  <envar><name>NONVAR_PROJ_NAME</name><value>CONUS</value></envar>
+  <envar><name>NONVAR_USERDX</name><value>3000</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:40:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <datadep age="00:02:00"><cyclestr>/public/data/grids/rap/obs/@Y@m@d@H.rap.t@Hz.lgycld.tm00.bufr_d</cyclestr></datadep>
+    <datadep age="00:02:00"><cyclestr>/public/data/grids/rap/obs/@Y@m@d@H.rap.t@Hz.prepbufr.tm00</cyclestr></datadep>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="nonvar_reflobs" cycledefs="prod,spinup" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_NONVAR_REFLOBS</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_nonvar_reflobs_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_nonvar_reflobs_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:25:00</walltime>
+  <nodes>1:ppn=40</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>REFERENCE_TIME</name><value>@Y-@m-@dT@H:00:00Z</value></envar>
+  <envar><name>OBSPATH_NSSLMOSIAC</name><value>/public/data/radar/mrms</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+    
+    <timedep><cyclestr offset="00:40:00">@Y@m@d@H@M00</cyclestr></timedep>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="ungrib_ic" cycledefs="ic" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UNGRIB</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_ungrib_ic_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_ungrib_ic_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:50:00</walltime>
+  <nodes>1:ppn=1</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>TYPE</name><value>ic</value></envar>
+  <envar><name>SOURCE_BASEDIR</name><value><cyclestr offset="-3:00:00">/public/data/grids/gfs/ncep</cyclestr></value></envar>
+  <envar><name>FILENAME_PATTERN</name><value><cyclestr offset="-3:00:00">gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f^HHH^</cyclestr></value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>OFFSET</name><value>3</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+  <envar><name>FILENAME_PATTERN_B</name><value><cyclestr offset="-3:00:00">gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f^HHH^</cyclestr></value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:05:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <datadep age="00:02:00"><cyclestr offset="-3:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f003</cyclestr></datadep>
+    <datadep age="00:02:00"><cyclestr offset="-3:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f003</cyclestr></datadep>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<metatask name="ungrib_lbc">
+<var name="group_index">01 02 03</var>
+
+<task name="ungrib_lbc_g#group_index#" cycledefs="lbc" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UNGRIB</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_ungrib_lbc_g#group_index#_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_ungrib_lbc_g#group_index#_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:50:00</walltime>
+  <nodes>1:ppn=1</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>TYPE</name><value>lbc</value></envar>
+  <envar><name>SOURCE_BASEDIR</name><value><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep</cyclestr></value></envar>
+  <envar><name>FILENAME_PATTERN</name><value><cyclestr offset="-6:00:00">gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f^HHH^</cyclestr></value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>OFFSET</name><value>6</value></envar>
+  <envar><name>LENGTH</name><value>84</value></envar>
+  <envar><name>INTERVAL</name><value>1</value></envar>
+  <envar><name>GROUP_INDEX</name><value>#group_index#</value></envar>
+  <envar><name>GROUP_TOTAL_NUM</name><value>3</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+  <envar><name>FILENAME_PATTERN_B</name><value><cyclestr offset="-6:00:00">gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f^HHH^</cyclestr></value></envar>
+
+  <dependency>
+  <and>
+     <timedep><cyclestr offset="00:05:00">@Y@m@d@H@M00</cyclestr></timedep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f006</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f006</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f007</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f007</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f008</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f008</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f009</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f009</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f010</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f010</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f011</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f011</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f012</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f012</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f013</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f013</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f014</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f014</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f015</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f015</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f016</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f016</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f017</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f017</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f018</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f018</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f019</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f019</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f020</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f020</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f021</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f021</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f022</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f022</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f023</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f023</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f024</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f024</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f025</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f025</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f026</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f026</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f027</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f027</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f028</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f028</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f029</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f029</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f030</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f030</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f031</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f031</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f032</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f032</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f033</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f033</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f034</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f034</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f035</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f035</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f036</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f036</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f037</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f037</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f038</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f038</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f039</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f039</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f040</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f040</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f041</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f041</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f042</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f042</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f043</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f043</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f044</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f044</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f045</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f045</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f046</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f046</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f047</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f047</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f048</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f048</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f049</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f049</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f050</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f050</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f051</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f051</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f052</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f052</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f053</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f053</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f054</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f054</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f055</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f055</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f056</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f056</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f057</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f057</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f058</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f058</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f059</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f059</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f060</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f060</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f061</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f061</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f062</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f062</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f063</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f063</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f064</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f064</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f065</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f065</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f066</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f066</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f067</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f067</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f068</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f068</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f069</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f069</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f070</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f070</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f071</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f071</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f072</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f072</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f073</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f073</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f074</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f074</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f075</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f075</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f076</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f076</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f077</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f077</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f078</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f078</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f079</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f079</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f080</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f080</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f081</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f081</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f082</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f082</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f083</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f083</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f084</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f084</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f085</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f085</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f086</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f086</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f087</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f087</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f088</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f088</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f089</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f089</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f090</cyclestr></datadep>
+     <datadep age="00:02:00"><cyclestr offset="-6:00:00">/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f090</cyclestr></datadep>
+  </and>
+  </dependency>
+</task>
+</metatask>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="ic" cycledefs="ic" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_IC</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_ic_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_ic_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:50:00</walltime>
+  <nodes>2:ppn=192</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>PHYSICS_SUITE</name><value>hrrrv5</value></envar>
+  <envar><name>NSOIL_LEVELS</name><value>9</value></envar>
+  <envar><name>USE_MERRA2</name><value>FALSE</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+    <and>
+      <timedep><cyclestr offset="00:10:00">@Y@m@d@H@M00</cyclestr></timedep>
+      <taskdep task="ungrib_ic"/>
+    </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<metatask name="lbc">
+<var name="group_index">01 02 03 04 05 06</var>
+<task name="lbc_g#group_index#" cycledefs="lbc" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_LBC</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_lbc_g#group_index#_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_lbc_g#group_index#_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:50:00</walltime>
+  <nodes>2:ppn=192</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>PHYSICS_SUITE</name><value>hrrrv5</value></envar>
+  <envar><name>OFFSET</name><value>6</value></envar>
+  <envar><name>LENGTH</name><value>84</value></envar>
+  <envar><name>INTERVAL</name><value>1</value></envar>
+  <envar><name>GROUP_INDEX</name><value>#group_index#</value></envar>
+  <envar><name>GROUP_TOTAL_NUM</name><value>6</value></envar>
+  <envar><name>NSOIL_LEVELS</name><value>9</value></envar>
+  <envar><name>USE_MERRA2</name><value>FALSE</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:10:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <metataskdep metatask="ungrib_lbc"/>
+  </and>
+  </dependency>
+</task>
+</metatask>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="prep_lbc" cycledefs="prod,spinup" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_PREP_LBC</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_prep_lbc_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_prep_lbc_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:30:00</walltime>
+  <nodes>1:ppn=1</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>LBC_INTERVAL</name><value>1</value></envar>
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>PREP_LBC_LOOK_BACK_HRS</name><value>11</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+   <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+   <or>
+     <metataskdep metatask="lbc" cycle_offset="-0:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-1:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-2:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-3:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-4:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-5:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-6:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-7:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-8:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-9:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-10:00:00" />
+     <metataskdep metatask="lbc" cycle_offset="-11:00:00" />
+   </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="prep_ic_spinup" cycledefs="spinup" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_PREP_IC</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_prep_ic_spinup_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_prep_ic_spinup_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:10:00</walltime>
+  <nodes>1:ppn=10</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>COLDSTART_CYCS</name><value>03 15</value></envar>
+  <envar><name>DO_SFC_UPDATE</name><value>TRUE</value></envar>
+  <envar><name>SST_UPDATE_CYCS</name><value>00 12</value></envar>
+  <envar><name>LAKE_SOURCE_DIR</name><value>/public/data/grids/rrfs_a</value></envar>
+  <envar><name>NSST_SOURCE_DIR</name><value>/public/data/grids/ncep/sst/0p083deg/grib2</value></envar>
+  <envar><name>DO_BLENDING</name><value>FALSE</value></envar>
+  <envar><name>SPINUP_MODE</name><value>1</value></envar>
+  <envar><name>PREP_IC_TYPE</name><value>jedivar</value></envar>
+  <envar><name>USE_THE_LATEST_SATBIAS</name><value>FALSE</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+  <envar><name>SFC_UPDATE_LOOK_BACK_HRS</name><value>3</value></envar>
+  <envar><name>SFC_UPDATE_SOURCE_DIR</name><value></value></envar>
+
+  <dependency>
+   <or>
+    <and>
+      <or>
+        <streq><left><cyclestr>@H</cyclestr></left><right>03</right></streq>
+        <streq><left><cyclestr>@H</cyclestr></left><right>15</right></streq>
+      </or>
+      <taskdep task="ic"/>
+      <or>
+        <timedep><cyclestr offset="02:00:00">@Y@m@d@H@M00</cyclestr></timedep>
+        <datadep age="00:00:05"><cyclestr offset="-1:00:00">&COMROOT;/&NET;/&rrfs_ver;/&RUN;.@Y@m@d/@H/fcst/&WGF;/fcst_f001.done</cyclestr></datadep>
+        <datadep age="00:00:05"><cyclestr offset="-2:00:00">&COMROOT;/&NET;/&rrfs_ver;/&RUN;.@Y@m@d/@H/fcst/&WGF;/fcst_f002.done</cyclestr></datadep>
+        <datadep age="00:00:05"><cyclestr offset="-3:00:00">&COMROOT;/&NET;/&rrfs_ver;/&RUN;.@Y@m@d/@H/fcst/&WGF;/fcst_f003.done</cyclestr></datadep>
+      </or>
+    </and>
+    <and>
+      <strneq><left><cyclestr>@H</cyclestr></left><right>03</right></strneq>
+      <strneq><left><cyclestr>@H</cyclestr></left><right>15</right></strneq>
+      <taskdep task="fcst_spinup" cycle_offset="-1:00:00"/>
+    </and>
+   </or>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="jedivar_spinup" cycledefs="spinup" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_JEDIVAR</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_jedivar_spinup_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_jedivar_spinup_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:25:00</walltime>
+  <nodes>20:ppn=40</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>PHYSICS_SUITE</name><value>hrrrv5</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>NSOIL_LEVELS</name><value>9</value></envar>
+  <envar><name>REFERENCE_TIME</name><value>@Y-@m-@dT@H:00:00Z</value></envar>
+  <envar><name>YAML_GEN_METHOD</name><value>1</value></envar>
+  <envar><name>COLDSTART_CYCS_DO_DA</name><value>TRUE</value></envar>
+  <envar><name>DO_RADAR_REF</name><value>TRUE</value></envar>
+  <envar><name>HYB_WGT_ENS</name><value>0.5</value></envar>
+  <envar><name>HYB_WGT_STATIC</name><value>0.5</value></envar>
+  <envar><name>HYB_ENS_TYPE</name><value>1</value></envar>
+  <envar><name>HYB_ENS_PATH</name><value></value></envar>
+  <envar><name>ENS_BEC_LOOK_BACK_HRS</name><value>1</value></envar>
+  <envar><name>ENS_SIZE</name><value>30</value></envar>
+  <envar><name>USE_CONV_SAT_INFO</name><value>TRUE</value></envar>
+  <envar><name>SAT_USELIST</name><value></value></envar>
+  <envar><name>EMPTY_OBS_SPACE_ACTION</name><value>skip output</value></envar>
+  <envar><name>STATIC_BEC_MODEL</name><value>GSIBEC</value></envar>
+  <envar><name>GSIBEC_X</name><value>40</value></envar>
+  <envar><name>GSIBEC_Y</name><value>20</value></envar>
+  <envar><name>GSIBEC_NLAT</name><value>593</value></envar>
+  <envar><name>GSIBEC_NLON</name><value>921</value></envar>
+  <envar><name>GSIBEC_LAT_START</name><value>-15.984000</value></envar>
+  <envar><name>GSIBEC_LAT_END</name><value>15.984000</value></envar>
+  <envar><name>GSIBEC_LON_START</name><value>-24.840000</value></envar>
+  <envar><name>GSIBEC_LON_END</name><value>24.840000</value></envar>
+  <envar><name>GSIBEC_NORTH_POLE_LAT</name><value>51.226749</value></envar>
+  <envar><name>GSIBEC_NORTH_POLE_LON</name><value>82.592899</value></envar>
+  <envar><name>DO_SPINUP</name><value>TRUE</value></envar>
+  <envar><name>SNUDGETYPES</name><value>GGG</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:40:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="prep_ic_spinup"/>
+    <taskdep task="ioda_bufr"/>
+    <or>
+      <datadep age="00:00:05"><cyclestr offset="-1:00:00">&COMROOT;/rrfs/v2.1.4/rrfs.@Y@m@d/@H/fcst/enkf/fcst_f001.done</cyclestr></datadep>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="nonvar_cldana_spinup" cycledefs="spinup" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_NONVAR_CLDANA</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_nonvar_cldana_spinup_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_nonvar_cldana_spinup_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:20:00</walltime>
+  <nodes>1:ppn=40</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>DO_SPINUP</name><value>TRUE</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:00:01">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="jedivar_spinup"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="fcst_spinup" cycledefs="spinup" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_FCST</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_fcst_spinup_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_fcst_spinup_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>8:00:00</walltime>
+  <nodes>10:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LBC_INTERVAL</name><value>1</value></envar>
+  <envar><name>HISTORY_INTERVAL</name><value>1</value></envar>
+  <envar><name>DIAG_INTERVAL</name><value>1</value></envar>
+  <envar><name>RESTART_INTERVAL</name><value>none</value></envar>
+  <envar><name>MPASOUT_INTERVAL</name><value>1</value></envar>
+  <envar><name>MPASOUT_TIMELEVELS</name><value>0 1 2 3 15 27</value></envar>
+  <envar><name>PHYSICS_SUITE</name><value>hrrrv5</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>NSOIL_LEVELS</name><value>9</value></envar>
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01</value></envar>
+  <envar><name>FCST_DT</name><value>20</value></envar>
+  <envar><name>FCST_SUBSTEPS</name><value>4</value></envar>
+  <envar><name>FCST_RADT</name><value>15</value></envar>
+  <envar><name>DO_SPINUP</name><value>TRUE</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:10:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="prep_lbc" cycle_offset="0:00:00"/>
+    <taskdep task="jedivar_spinup"/>
+    <taskdep task="nonvar_cldana_spinup"/>
+    <taskdep task="prep_ic_spinup"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="prep_ic" cycledefs="prod" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_PREP_IC</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_prep_ic_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_prep_ic_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:10:00</walltime>
+  <nodes>1:ppn=10</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>COLDSTART_CYCS</name><value>03 15</value></envar>
+  <envar><name>DO_SFC_UPDATE</name><value>TRUE</value></envar>
+  <envar><name>SST_UPDATE_CYCS</name><value>00 12</value></envar>
+  <envar><name>LAKE_SOURCE_DIR</name><value>/public/data/grids/rrfs_a</value></envar>
+  <envar><name>NSST_SOURCE_DIR</name><value>/public/data/grids/ncep/sst/0p083deg/grib2</value></envar>
+  <envar><name>DO_BLENDING</name><value>FALSE</value></envar>
+  <envar><name>SPINUP_MODE</name><value>-1</value></envar>
+  <envar><name>PREP_IC_TYPE</name><value>jedivar</value></envar>
+  <envar><name>USE_THE_LATEST_SATBIAS</name><value>FALSE</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+  <envar><name>PRODSWITCH_CYCS</name><value>09 21</value></envar>
+
+  <dependency>
+  <and>
+        <timedep><cyclestr offset="02:00:00">@Y@m@d@H@M00</cyclestr></timedep>
+   <or>
+    <and>
+      <or>
+        <streq><left><cyclestr>@H</cyclestr></left><right>09</right></streq>
+        <streq><left><cyclestr>@H</cyclestr></left><right>21</right></streq>
+      </or>
+      <taskdep task="fcst_spinup" cycle_offset="-1:00:00"/>
+    </and>
+    <and>
+      <strneq><left><cyclestr>@H</cyclestr></left><right>09</right></strneq>
+      <strneq><left><cyclestr>@H</cyclestr></left><right>21</right></strneq>
+      <datadep age="00:00:05"><cyclestr offset="-1:00:00">&COMROOT;/&NET;/&rrfs_ver;/&RUN;.@Y@m@d/@H/fcst/&WGF;/fcst_f001.done</cyclestr></datadep>
+    </and>
+   </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="jedivar" cycledefs="prod" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_JEDIVAR</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_jedivar_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_jedivar_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:25:00</walltime>
+  <nodes>20:ppn=40</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>PHYSICS_SUITE</name><value>hrrrv5</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>NSOIL_LEVELS</name><value>9</value></envar>
+  <envar><name>REFERENCE_TIME</name><value>@Y-@m-@dT@H:00:00Z</value></envar>
+  <envar><name>YAML_GEN_METHOD</name><value>1</value></envar>
+  <envar><name>COLDSTART_CYCS_DO_DA</name><value>TRUE</value></envar>
+  <envar><name>DO_RADAR_REF</name><value>TRUE</value></envar>
+  <envar><name>HYB_WGT_ENS</name><value>0.5</value></envar>
+  <envar><name>HYB_WGT_STATIC</name><value>0.5</value></envar>
+  <envar><name>HYB_ENS_TYPE</name><value>1</value></envar>
+  <envar><name>HYB_ENS_PATH</name><value></value></envar>
+  <envar><name>ENS_BEC_LOOK_BACK_HRS</name><value>1</value></envar>
+  <envar><name>ENS_SIZE</name><value>30</value></envar>
+  <envar><name>USE_CONV_SAT_INFO</name><value>TRUE</value></envar>
+  <envar><name>SAT_USELIST</name><value></value></envar>
+  <envar><name>EMPTY_OBS_SPACE_ACTION</name><value>skip output</value></envar>
+  <envar><name>STATIC_BEC_MODEL</name><value>GSIBEC</value></envar>
+  <envar><name>GSIBEC_X</name><value>40</value></envar>
+  <envar><name>GSIBEC_Y</name><value>20</value></envar>
+  <envar><name>GSIBEC_NLAT</name><value>593</value></envar>
+  <envar><name>GSIBEC_NLON</name><value>921</value></envar>
+  <envar><name>GSIBEC_LAT_START</name><value>-15.984000</value></envar>
+  <envar><name>GSIBEC_LAT_END</name><value>15.984000</value></envar>
+  <envar><name>GSIBEC_LON_START</name><value>-24.840000</value></envar>
+  <envar><name>GSIBEC_LON_END</name><value>24.840000</value></envar>
+  <envar><name>GSIBEC_NORTH_POLE_LAT</name><value>51.226749</value></envar>
+  <envar><name>GSIBEC_NORTH_POLE_LON</name><value>82.592899</value></envar>
+  <envar><name>SNUDGETYPES</name><value>GGG</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:40:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="prep_ic"/>
+    <taskdep task="ioda_bufr"/>
+    <or>
+      <datadep age="00:00:05"><cyclestr offset="-1:00:00">&COMROOT;/rrfs/v2.1.4/rrfs.@Y@m@d/@H/fcst/enkf/fcst_f001.done</cyclestr></datadep>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="nonvar_cldana" cycledefs="prod" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_NONVAR_CLDANA</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_nonvar_cldana_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_nonvar_cldana_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:20:00</walltime>
+  <nodes>1:ppn=40</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:00:01">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="jedivar"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="fcst" cycledefs="prod" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_FCST</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_fcst_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_fcst_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>8:00:00</walltime>
+  <nodes>10:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LBC_INTERVAL</name><value>1</value></envar>
+  <envar><name>HISTORY_INTERVAL</name><value>1</value></envar>
+  <envar><name>DIAG_INTERVAL</name><value>1</value></envar>
+  <envar><name>RESTART_INTERVAL</name><value>none</value></envar>
+  <envar><name>MPASOUT_INTERVAL</name><value>1</value></envar>
+  <envar><name>MPASOUT_TIMELEVELS</name><value>0 1 2 3 15 27</value></envar>
+  <envar><name>PHYSICS_SUITE</name><value>hrrrv5</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>NSOIL_LEVELS</name><value>9</value></envar>
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>FCST_DT</name><value>20</value></envar>
+  <envar><name>FCST_SUBSTEPS</name><value>4</value></envar>
+  <envar><name>FCST_RADT</name><value>15</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:10:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="prep_lbc" cycle_offset="0:00:00"/>
+    <taskdep task="jedivar"/>
+    <taskdep task="nonvar_cldana"/>
+    <taskdep task="prep_ic"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<metatask name="save_for_next">
+<var name="mpasout_fhr">01 02 03 15 27</var>
+<task name="save_for_next_f#mpasout_fhr#" cycledefs="prod" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_SAVE_FOR_NEXT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_save_for_next_f#mpasout_fhr#_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_save_for_next_f#mpasout_fhr#_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:50:00</walltime>
+  <nodes>1:ppn=10</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>MPASOUT_INTERVAL</name><value>1</value></envar>
+  <envar><name>FCST_HR</name><value>#mpasout_fhr#</value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:10:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="#mpasout_fhr#:00:00">/mpasout.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+  </and>
+  </dependency>
+</task>
+</metatask>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g00" cycledefs="prod" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g00_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g00_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>00</value></envar>
+  <envar><name>GROUP_HOURS</name><value>0 1 2 3 4 5 6 7</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="7:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="7:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g00" cycledefs="prod" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g00_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g00_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>00</value></envar>
+  <envar><name>GROUP_HOURS</name><value>0 1 2 3 4 5 6 7</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g00"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g01" cycledefs="post01" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g01_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g01_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>01</value></envar>
+  <envar><name>GROUP_HOURS</name><value>8 9 10 11 12 13 14</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="14:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="14:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g01" cycledefs="post01" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g01_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g01_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>01</value></envar>
+  <envar><name>GROUP_HOURS</name><value>8 9 10 11 12 13 14</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g01"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g02" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g02_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g02_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>02</value></envar>
+  <envar><name>GROUP_HOURS</name><value>15 16 17 18 19 20 21</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="21:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="21:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g02" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g02_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g02_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>02</value></envar>
+  <envar><name>GROUP_HOURS</name><value>15 16 17 18 19 20 21</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g02"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g03" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g03_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g03_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>03</value></envar>
+  <envar><name>GROUP_HOURS</name><value>22 23 24 25 26 27 28</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="28:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="28:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g03" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g03_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g03_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>03</value></envar>
+  <envar><name>GROUP_HOURS</name><value>22 23 24 25 26 27 28</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g03"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g04" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g04_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g04_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>04</value></envar>
+  <envar><name>GROUP_HOURS</name><value>29 30 31 32 33 34 35</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="35:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="35:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g04" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g04_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g04_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>04</value></envar>
+  <envar><name>GROUP_HOURS</name><value>29 30 31 32 33 34 35</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g04"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g05" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g05_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g05_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>05</value></envar>
+  <envar><name>GROUP_HOURS</name><value>36 37 38 39 40 41 42</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="42:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="42:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g05" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g05_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g05_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>05</value></envar>
+  <envar><name>GROUP_HOURS</name><value>36 37 38 39 40 41 42</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g05"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g06" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g06_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g06_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>06</value></envar>
+  <envar><name>GROUP_HOURS</name><value>43 44 45 46 47 48 49</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="49:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="49:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g06" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g06_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g06_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>06</value></envar>
+  <envar><name>GROUP_HOURS</name><value>43 44 45 46 47 48 49</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g06"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g07" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g07_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g07_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>07</value></envar>
+  <envar><name>GROUP_HOURS</name><value>50 51 52 53 54 55 56</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="56:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="56:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g07" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g07_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g07_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>07</value></envar>
+  <envar><name>GROUP_HOURS</name><value>50 51 52 53 54 55 56</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g07"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g08" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g08_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g08_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>08</value></envar>
+  <envar><name>GROUP_HOURS</name><value>57 58 59 60 61 62 63</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="63:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="63:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g08" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g08_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g08_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>08</value></envar>
+  <envar><name>GROUP_HOURS</name><value>57 58 59 60 61 62 63</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g08"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="mpassit_g09" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_MPASSIT</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_mpassit_g09_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_mpassit_g09_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>09</value></envar>
+  <envar><name>GROUP_HOURS</name><value>64 65 66 67 68 69 70 71 72</value></envar>
+  <envar><name>MPASSIT_NX</name><value>1800</value></envar>
+  <envar><name>MPASSIT_NY</name><value>1060</value></envar>
+  <envar><name>MPASSIT_DX</name><value>3000.0</value></envar>
+  <envar><name>MPASSIT_REF_LAT</name><value>38.5</value></envar>
+  <envar><name>MPASSIT_REF_LON</name><value>-97.5</value></envar>
+  <envar><name>EXTRN_MDL_SOURCE</name><value>GFS</value></envar>
+  <envar><name>LSM_SCHEME</name><value>sf_ruc</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <or>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="72:00:00">/history.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <datadep age="00:00:10"><cyclestr>&DATAROOT;/@Y@m@d/&RUN;_fcst_@H_&rrfs_ver;/&WGF;</cyclestr><cyclestr offset="72:00:00">/diag.@Y-@m-@d_@H.@M.@S.nc.done</cyclestr></datadep>
+      <taskdep task="fcst"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="upp_g09" cycledefs="post02" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_UPP</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_upp_g09_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_upp_g09_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>3:00:00</walltime>
+  <nodes>1:ppn=160</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>GROUP_INDEX</name><value>09</value></envar>
+  <envar><name>GROUP_HOURS</name><value>64 65 66 67 68 69 70 71 72</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+  <envar><name>MEMDIR</name><value></value></envar>
+  <envar><name>KEEPDATA</name><value>YES</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:15:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="mpassit_g09"/>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<metatask name="graphics">
+<var name="tile">full NE NC NW SE SC SW EastCO</var>
+<task name="graphics_#tile#" cycledefs="prod" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_GRAPHICS</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_graphics_#tile#_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_graphics_#tile#_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>02:00:00</walltime>
+  <nodes>1:ppn=20</nodes>
+  <native>--exclusive</native>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>FCST_LEN_HRS_CYCLES</name><value>72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03</value></envar>
+  <envar><name>TILE</name><value>#tile#</value></envar>
+  <envar><name>GRAPHICS_ZIP</name><value>TRUE</value></envar>
+  <envar><name>GRAPHICS_MODEL</name><value>RRFSv2X</value></envar>
+  <envar><name>UPP_DOMAIN</name><value>conus.</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:10:00">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="upp_g00"/>
+    <or>
+      <not><taskvalid task="upp_g01"/></not>
+      <taskdep task="upp_g01"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g02"/></not>
+      <taskdep task="upp_g02"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g03"/></not>
+      <taskdep task="upp_g03"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g04"/></not>
+      <taskdep task="upp_g04"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g05"/></not>
+      <taskdep task="upp_g05"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g06"/></not>
+      <taskdep task="upp_g06"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g07"/></not>
+      <taskdep task="upp_g07"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g08"/></not>
+      <taskdep task="upp_g08"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g09"/></not>
+      <taskdep task="upp_g09"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+</metatask>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="archive" cycledefs="archive" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_ARCHIVE</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_archive_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_archive_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>u1-service</partition>
+  <walltime>8:00:00</walltime>
+  <nodes>1:ppn=1</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>ARCHIVE_INTERVAL</name><value>1</value></envar>
+  <envar><name>ARCHIVE_HPSSDIR</name><value>/5year/BMC/wrfruc/rrfsv2x</value></envar>
+  <envar><name>ARCHIVE_COM1_SPEC</name><value>{"include":"ioda*, jedivar, nonvar*, fcst, upp, pyDAmonitor, nclprd", "exclude":""}</value></envar>
+  <envar><name>ARCHIVE_STMP</name><value></value></envar>
+  <envar><name>ARCHIVE_STMP_INTERVAL</name><value>1</value></envar>
+
+  <dependency>
+  <and>
+    <timedep><cyclestr offset="00:00:01">@Y@m@d@H@M00</cyclestr></timedep>
+    <taskdep task="upp_g00"/>
+    <metataskdep metatask="graphics"/>
+    <or>
+      <not><taskvalid task="upp_g01"/></not>
+      <taskdep task="upp_g01"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g02"/></not>
+      <taskdep task="upp_g02"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g03"/></not>
+      <taskdep task="upp_g03"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g04"/></not>
+      <taskdep task="upp_g04"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g05"/></not>
+      <taskdep task="upp_g05"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g06"/></not>
+      <taskdep task="upp_g06"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g07"/></not>
+      <taskdep task="upp_g07"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g08"/></not>
+      <taskdep task="upp_g08"/>
+    </or>
+    <or>
+      <not><taskvalid task="upp_g09"/></not>
+      <taskdep task="upp_g09"/>
+    </or>
+  </and>
+  </dependency>
+</task>
+
+<!--
+************************************************************************************
+************************************************************************************
+-->
+
+<task name="clean" cycledefs="prod" maxtries="3">
+  <command>&HOMErrfs;/workflow/sideload/launch.sh JRRFS_CLEAN</command>
+  <join><cyclestr>&LOGROOT;/rrfs.@Y@m@d/@H/det/rrfs_clean_rrfsv2x_@Y@m@d@H.log</cyclestr></join>
+
+  <jobname><cyclestr>rrfsv2x_clean_c@H</cyclestr></jobname>
+  <account>&ACCOUNT;</account>
+  <queue>&QUEUE_DEFAULT;</queue>
+  <partition>&PARTITION;</partition>
+  <walltime>00:50:00</walltime>
+  <nodes>1:ppn=1</nodes>
+  <deadline><cyclestr offset="24:00:00">@Y@m@d@H@M</cyclestr></deadline>
+  &task_common_vars;
+  <envar><name>CLEAN_MODE</name><value>1</value></envar>
+  <envar><name>CHECK_IS_CYC_DONE</name><value>FALSE</value></envar>
+  <envar><name>STMP_RETENTION_CYCS</name><value>18</value></envar>
+  <envar><name>COM_RETENTION_CYCS</name><value>{"default": 96, "lbc,fcst": 48, "upp,nclprd,pyDAmonitor": 960}</value></envar>
+  <envar><name>LOG_RETENTION_CYCS</name><value>840</value></envar>
+  <envar><name>CLEAN_BACK_DAYS</name><value>5</value></envar>
+  <envar><name>STMP_KEPT_TASKS</name><value></value></envar>
+
+  <dependency>
+  <and>
+    <taskdep task="prep_ic"/>
+  </and>
+  </dependency>
+</task>
+
+</workflow>
