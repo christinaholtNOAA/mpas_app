@@ -257,6 +257,22 @@ create_lbcs:
   platform:
     account: '{{ platform.account }}'
     scheduler: '{{ platform.scheduler }}'
+assimilation:
+  jedi:
+    execution:
+      batchargs:
+        nodes: 20
+        tasks_per_node: 40
+        walltime: "00:25:00"
+        exclusive: true
+  cldanl:
+    execution:
+      batchargs:
+        nodes: 1
+        tasks_per_node: 40
+        walltime: "00:20:00"
+        exclusive: true
+
 forecast:
   # mpas settings follow UW Tools driver YAML
   mpas:

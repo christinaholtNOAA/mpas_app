@@ -1,0 +1,139 @@
+workflow:
+  tasks:
+    task_jedivar: &jeditask
+      attrs:
+        cycledefs: prod
+        maxtries: 3
+      account: "{{ platform.account }}"
+      command: "{{ common.launch }} JRRFS_JEDIVAR"
+      join:
+        cyclestr:
+          value: '&LOGDIR;/{{ jobname }}_@Y@m@d@H.log'
+      nodes: "{{ assimilation.jedi.execution.batchargs.nodes }}:ppn={{ assimilation.jedi.execution.batchargs.tasks_per_node }}"
+      walltime: "{{ assimilation.jedi.execution.batchargs.walltime }}"
+      exclusive: "{{ assimilation.jedi.execution.batchargs.exclusive }}"
+      envars: &jedi_envars
+        <<: *common_envars
+        EXTRN_MDL_SOURCE: "GFS"
+        PHYSICS_SUITE: "hrrrv5"
+        LSM_SCHEME: "sf_ruc"
+        NSOIL_LEVELS: "9"
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        YAML_GEN_METHOD: "1"
+        COLDSTART_CYCS_DO_DA: "TRUE"
+        DO_RADAR_REF: "TRUE"
+        HYB_WGT_ENS: "0.5"
+        HYB_WGT_STATIC: "0.5"
+        HYB_ENS_TYPE: "1"
+        HYB_ENS_PATH: ""
+        ENS_BEC_LOOK_BACK_HRS: "1"
+        ENS_SIZE: "30"
+        USE_CONV_SAT_INFO: "TRUE"
+        SAT_USELIST: ""
+        EMPTY_OBS_SPACE_ACTION: "skip output"
+        STATIC_BEC_MODEL: "GSIBEC"
+        GSIBEC_X: "40"
+        GSIBEC_Y: "20"
+        GSIBEC_NLAT: "593"
+        GSIBEC_NLON: "921"
+        GSIBEC_LAT_START: "-15.984000"
+        GSIBEC_LAT_END: "15.984000"
+        GSIBEC_LON_START: "-24.840000"
+        GSIBEC_LON_END: "24.840000"
+        GSIBEC_NORTH_POLE_LAT: "51.226749"
+        GSIBEC_NORTH_POLE_LON: "82.592899"
+        SNUDGETYPES: "GGG"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_40_00:
+            cyclestr:
+              attrs:
+                offset: "00:40:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_prep_ic:
+            attrs:
+              task: prep_ic
+          taskdep_ioda_bufr:
+            attrs:
+              task: ioda_bufr
+          or_fcst_f001:
+            datadep_fcst_f001:
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-1:00:00"
+                  value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H/fcst/enkf/fcst_f001.done"
+    task_nonvar_cldana: &cldanltask
+      attrs:
+        cycledefs: prod
+        maxtries: 3
+      account: "{{ platform.account }}"
+      command: "{{ common.launch }} JRRFS_NONVAR_CLDANA"
+      join:
+        cyclestr:
+          value: '&LOGDIR;/{{ jobname }}_@Y@m@d@H.log'
+      nodes: "{{ assimilation.cldanl.execution.batchargs.nodes }}:ppn={{ assimilation.cldanl.execution.batchargs.tasks_per_node }}"
+      walltime: "{{ assimilation.cldanl.execution.batchargs.walltime }}"
+      exclusive: "{{ assimilation.cldanl.execution.batchargs.exclusive }}"
+      envars: &cldanl_vars
+        <<: *common_envars
+        EXTRN_MDL_SOURCE: "GFS"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_00_01:
+            cyclestr:
+              attrs:
+                offset: "00:00:01"
+              value: "@Y@m@d@H@M00"
+          taskdep_jedivar:
+            attrs:
+              task: jedivar
+    task_jedivar_spinup:
+      <<: *jeditask
+      attrs:
+        cycledefs: spinup
+        maxtries: 3
+      envars:
+        <<: *jedi_envars
+        NSOIL_LEVELS: "10"
+        DO_SPINUP: "TRUE"
+      dependency:
+        and:
+          timedep_00_40_00:
+            cyclestr:
+              attrs:
+                offset: "00:40:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_prep_ic_spinup:
+            attrs:
+              task: prep_ic_spinup
+          taskdep_ioda_bufr:
+            attrs:
+              task: ioda_bufr
+          or_fcst_f001:
+            datadep_fcst_f001:
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-1:00:00"
+                  value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H/fcst/enkf/fcst_f001.done"
+    task_nonvar_cldana_spinup:
+      <<: *cldanltask
+      attrs:
+        cycledefs: spinup
+        maxtries: 3
+      envars:
+        <<: *cldanl_vars
+        DO_SPINUP: "TRUE"
+      dependency:
+        and:
+          timedep_00_00_01:
+            cyclestr:
+              attrs:
+                offset: "00:00:01"
+              value: "@Y@m@d@H@M00"
+          taskdep_jedivar_spinup:
+            attrs:
+              task: jedivar_spinup

@@ -1,0 +1,22 @@
+workflow:
+  tasks:
+    task_ioda_bufr:
+      deadline: &oneday
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+    task_ioda_mrms_refl:
+      deadline: *oneday
+    task_nonvar_bufrobs:
+      deadline: *oneday
+    task_nonvar_reflobs:
+      deadline: *oneday
+    task_jedivar:
+      deadline: *oneday
+    task_jedivar_spinup:
+      deadline: *oneday
+    task_nonvar_cldana:
+      deadline: *oneday
+    task_nonvar_cldana_spinup:
+      deadline: *oneday

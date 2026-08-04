@@ -62,11 +62,6 @@ workflow:
       nodes: "{{ prepare_bufr.ioda.execution.batchargs.nodes }}:ppn={{ prepare_bufr.ioda.execution.batchargs.tasks_per_node }}"
       walltime: "{{ prepare_bufr.ioda.execution.batchargs.walltime }}"
       exclusive: "{{ prepare_bufr.ioda.execution.batchargs.exclusive }}"
-      deadline:
-        cyclestr:
-          attrs:
-            offset: "24:00:00"
-          value: "@Y@m@d@H@M"
       envars:
         <<: *common_envars
         REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
@@ -98,11 +93,6 @@ workflow:
       nodes: "{{ prepare_mrms.ioda.execution.batchargs.nodes }}:ppn={{ prepare_mrms.ioda.execution.batchargs.tasks_per_node }}"
       walltime: "{{ prepare_mrms.ioda.execution.batchargs.walltime }}"
       exclusive: "{{ prepare_mrms.ioda.execution.batchargs.exclusive }}"
-      deadline:
-        cyclestr:
-          attrs:
-            offset: "24:00:00"
-          value: "@Y@m@d@H@M"
       envars:
         <<: *common_envars
         REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
@@ -129,11 +119,6 @@ workflow:
       nodes: "{{ prepare_bufr.nonvar.execution.batchargs.nodes }}:ppn={{ prepare_bufr.nonvar.execution.batchargs.tasks_per_node }}"
       walltime: "{{ prepare_bufr.nonvar.execution.batchargs.walltime }}"
       exclusive: "{{ prepare_bufr.nonvar.execution.batchargs.exclusive }}"
-      deadline:
-        cyclestr:
-          attrs:
-            offset: "24:00:00"
-          value: "@Y@m@d@H@M"
       envars:
         <<: *common_envars
         REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
@@ -177,11 +162,6 @@ workflow:
       nodes: "{{ prepare_mrms.nonvar.execution.batchargs.nodes }}:ppn={{ prepare_mrms.nonvar.execution.batchargs.tasks_per_node }}"
       walltime: "{{ prepare_mrms.nonvar.execution.batchargs.walltime }}"
       exclusive: "{{ prepare_mrms.nonvar.execution.batchargs.exclusive }}"
-      deadline:
-        cyclestr:
-          attrs:
-            offset: "24:00:00"
-          value: "@Y@m@d@H@M"
       envars:
         <<: *common_envars
         REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
