@@ -52,6 +52,39 @@ get_lbcs_data:
     cores: 1
     walltime: 00:20:00
   rundir: '{{ user.experiment_dir }}/{{ cycle.strftime("%Y%m%d%H") }}/{{ user.lbcs.external_model }}'
+
+prepare_bufr:
+  ioda:
+    execution:
+      batchargs:
+        nodes: 1
+        tasks_per_node: 1
+        walltime: "00:50:00"
+        exclusive: true
+  nonvar:
+    execution:
+      batchargs:
+        nodes: 1
+        tasks_per_node: 1
+        walltime: "00:25:00"
+        exclusive: true
+prepare_mrms:
+  ioda:
+    execution:
+      batchargs:
+        nodes: 1
+        tasks_per_node: 40
+        walltime: "00:50:00"
+        exclusive: true
+  nonvar:
+    execution:
+      batchargs:
+        nodes: 1
+        tasks_per_node: 40
+        walltime: "00:25:00"
+        exclusive: true
+
+
 prepare_grib_ics:
   # ungrib settings follow UW Tools driver YAML
   ungrib:

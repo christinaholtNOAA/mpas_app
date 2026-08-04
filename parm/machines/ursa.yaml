@@ -7,6 +7,9 @@ platform:
   geog_data:
     global: /scratch2/BMC/wrfruc/talcott/mpas/global/static/geog/
   service_partition: u1-service
+  obs:
+    mrms: /public/data/radar/mrms
+    rap: /public/data/grids/rap/obs
   data:
     gfs:
       path: /public/data/grids/gfs/0p25deg/grib2

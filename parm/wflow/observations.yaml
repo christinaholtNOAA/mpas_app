@@ -1,0 +1,195 @@
+common:
+  dataroot: /scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/stmp
+  comroot: /scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/com
+  logroot: /scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/com/rrfs/v2.1.4/logs
+  launch: "{{ common.home_rrfs }}/workflow/sideload/launch.sh"
+  run: rrfs
+  net: rrfs
+  ver: v2.1.4
+  wgf: det
+  tag: rrfsv2x
+  cycle_first: 202608030000
+  cycle_first_ic: 202608030300
+  cycle_last: 202609302300
+common_envars: &common_envars
+  MACHINE: "{{ user.platform }}"
+  HOMErrfs: "{{ user.mpas_app }}"
+  EXPDIR: "{{ user.experiment_dir }}"
+  COMROOT: "{{ common.comroot }}"
+  DATAROOT:
+    cyclestr:
+      value: "{{ common.dataroot }}/@Y@m@d"
+  COMINrrfs: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}"
+  COMOUT:
+    cyclestr:
+      value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H"
+  CDATE:
+    cyclestr:
+      value: "@Y@m@d@H"
+  PDY:
+    cyclestr:
+      value: "@Y@m@d"
+  cyc:
+    cyclestr:
+      value: "@H"
+  NET: "{{ common.net }}"
+  RUN: "{{ common.run }}"
+  rrfs_ver: "{{ common.ver }}"
+  MPI_RUN_CMD: srun
+  MESH_NAME: conus3km
+  WGF: "{{ common.wgf }}"
+  CYC_INTERVAL: 1
+workflow:
+    -
+      attrs:
+        group: prod
+      spec: "{{ user.first_cycle }} {{ user.last_cycle}} 01:00:00"
+    -
+      attrs:
+        group: spinup
+        valid_hours: "3 4 5 6 7 8 15 16 17 18 19 20"
+      spec: "{{ user.first_cycle }} {{ user.last_cycle}} 01:00:00"
+  tasks:
+    task_ioda_bufr:
+      attrs:
+        cycledefs: "prod,spinup"
+        maxtries: 3
+      account: "{{ platform.account }}"
+      command: "{{ common.launch }} JRRFS_IODA_BUFR"
+      join:
+        cyclestr:
+          value: '&LOGDIR;/{{ jobname }}_@Y@m@d@H.log'
+      nodes: "{{ prepare_bufr.ioda.execution.batchargs.nodes }}:ppn={{ prepare_bufr.ioda.execution.batchargs.tasks_per_node }}"
+      walltime: "{{ prepare_bufr.ioda.execution.batchargs.walltime }}"
+      exclusive: "{{ prepare_bufr.ioda.execution.batchargs.exclusive }}"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        YAML_GEN_METHOD: "1"
+        OBSPATH: "{{ platform.obs.rap }}"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_40_00:
+            cyclestr:
+              attrs:
+                offset: "00:40:00"
+              value: "@Y@m@d@H@M00"
+          datadep_prepbufr:
+            attrs:
+              age: "00:02:00"
+            value:
+              cyclestr:
+                value: "{{ platform.obs.rap }}/@Y@m@d@H.rap.t@Hz.prepbufr.tm00"
+    task_ioda_mrms_refl:
+      attrs:
+        cycledefs: "prod,spinup"
+        maxtries: 3
+      account: "{{ platform.account }}"
+      command: "{{ common.launch }} JRRFS_IODA_MRMS_REFL"
+      join:
+        cyclestr:
+          value: '&LOGDIR;/{{ jobname }}_@Y@m@d@H.log'
+      nodes: "{{ prepare_mrms.ioda.execution.batchargs.nodes }}:ppn={{ prepare_mrms.ioda.execution.batchargs.tasks_per_node }}"
+      walltime: "{{ prepare_mrms.ioda.execution.batchargs.walltime }}"
+      exclusive: "{{ prepare_mrms.ioda.execution.batchargs.exclusive }}"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        OBSPATH_NSSLMOSIAC: "{{ platform.obs.mrms }}"
+        RADARREFL_TIMELEVEL: "00"
+        MRMS_GRIDSPACINGDEG: "0.03"
+        ASSIM_METHOD: "jedivar"
+        KEEPDATA: "YES"
+      dependency:
+        timedep:
+          cyclestr:
+            attrs:
+              offset: "00:40:00"
+            value: "@Y@m@d@H@M00"
+    task_nonvar_bufrobs:
+      attrs:
+        cycledefs: "prod,spinup"
+        maxtries: 3
+      account: "{{ platform.account }}"
+      command: "{{ common.launch }} JRRFS_NONVAR_BUFROBS"
+      join:
+        cyclestr:
+          value: '&LOGDIR;/{{ jobname }}_@Y@m@d@H.log'
+      nodes: "{{ prepare_bufr.nonvar.execution.batchargs.nodes }}:ppn={{ prepare_bufr.nonvar.execution.batchargs.tasks_per_node }}"
+      walltime: "{{ prepare_bufr.nonvar.execution.batchargs.walltime }}"
+      exclusive: "{{ prepare_bufr.nonvar.execution.batchargs.exclusive }}"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        OBSPATH: "{{ platform.obs.rap }}"
+        NONVAR_LARC_NPTS: "3"
+        NONVAR_METAR_IMPACT: "20"
+        NONVAR_PROJ_NAME: "CONUS"
+        NONVAR_USERDX: "3000"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_40_00:
+            cyclestr:
+              attrs:
+                offset: "00:40:00"
+              value: "@Y@m@d@H@M00"
+          datadep_bufr_d:
+            attrs:
+              age: "00:02:00"
+            value:
+              cyclestr:
+                value: "{{ platform.obs.rap }}/@Y@m@d@H.rap.t@Hz.lgycld.tm00.bufr_d"
+          datadep_prepbufr:
+            attrs:
+              age: "00:02:00"
+            value:
+              cyclestr:
+                value: "{{ platform.obs.rap }}/@Y@m@d@H.rap.t@Hz.prepbufr.tm00"
+    task_nonvar_reflobs:
+      attrs:
+        cycledefs: "prod,spinup"
+        maxtries: 3
+      account: "{{ platform.account }}"
+      command: "{{ common.launch }} JRRFS_NONVAR_REFLOBS"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_nonvar_reflobs_c@H"
+      join:
+        cyclestr:
+          value: '&LOGDIR;/{{ jobname }}_@Y@m@d@H.log'
+      nodes: "{{ prepare_mrms.nonvar.execution.batchargs.nodes }}:ppn={{ prepare_mrms.nonvar.execution.batchargs.tasks_per_node }}"
+      walltime: "{{ prepare_mrms.nonvar.execution.batchargs.walltime }}"
+      exclusive: "{{ prepare_mrms.nonvar.execution.batchargs.exclusive }}"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        OBSPATH_NSSLMOSIAC: "{{ platform.obs.mrms }}"
+        KEEPDATA: "YES"
+      dependency:
+        timedep:
+          cyclestr:
+            attrs:
+              offset: "00:40:00"
+            value: "@Y@m@d@H@M00"
