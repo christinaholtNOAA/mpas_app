@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from uwtools.api.mpas import MPAS
+from uwtools.api.mpassit import MPASSIT
 
 from scripts.common import parse_args, run_component
 
