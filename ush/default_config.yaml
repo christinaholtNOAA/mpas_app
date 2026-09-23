@@ -341,14 +341,16 @@ forecast:
     account: '{{ platform.account }}'
     scheduler: '{{ platform.scheduler }}'
 post:
+  platform:
+    account: '{{ platform.account }}'
+    scheduler: '{{ platform.scheduler }}'
   # combined_files is a simple tasks that concatenates grib files. Please see
   # parm/wflow/post.yaml for information on the task.
   compbined_files:
     name: COMBINED.GrbF{{ '%02d' % (leadtime.total_seconds() // 3600) }}
     path: "{{  user.experiment_dir }}/"
-  # mpassit settings are not associated with a UW Driver. Please see the
-  # parm/wflow/post.yaml for information on how its runscript is called.
   mpassit:
+    # mpassit settings follow UW Tools driver YAML
     execution:
       batchargs:
         walltime: 00:30:00
@@ -356,10 +358,28 @@ post:
         nodes: 1
         native:
           - --exclusive
-    fixdir: /path/to/fix/files
-    nmldir: '{{ user.mpas_app }}/parm/mpassit'
-    parmdir: '{{ user.mpas_app }}/parm/mpassit'
-    rundir: '{{ user.experiment_dir }}/{{ cycle.strftime("%Y%m%d%H") }}/mpassit'
+      envcmds:
+        - module use {{ user.mpas_app }}/src/MPASSIT/modulefiles
+        - module load build.{{ user.platform }}.intel{{ "-llvm" if user.platform == "ursa" else "" }}
+      executable: "{{ user.mpas_app }}/exec/mpassit"
+      mpicmd: srun
+      mpiargs:
+        - --ntasks $SLURM_NTASKS
+    files_to_link:
+      diaglist: "{{ post.mpassit.parmdir }}/diaglist"
+      histlist_2d: "{{ post.mpassit.parmdir }}/histlist_2d"
+      histlist_3d: "{{ post.mpassit.parmdir }}/histlist_3d"
+      histlist_soil: "{{ post.mpassit.parmdir }}/histlist_soil"
+    namelist:
+      base_file: "{{ user.mpasssit.parmdir }}/namelist.mpassit"
+      update_values:
+        config:
+          grid_file_input_grid: '{{ create_ics.mpas_init.rundir }}/{{  user.mesh_label }}.init.nc'
+          hist_file_intput_grid: '{{ forecast.mpas.rundir }}/hist.{{ (cycle + leadtime).strftime("%Y-%m-%d_%H.%M.%S") }}.nc'
+          diagfile_input_grid: '{{ forecast.mpas.rundir }}/diag.{{ (cycle + leadtime).strftime("%Y-%m-%d_%H.%M.%S") }}.nc'
+          block_decomp_file: '{{ user.experiment_dir }}/{{ user.mesh_label }}.graph.info.part.{{ forecast.mpas.execution.batchargs.cores }}'
+          output_file: MPAS-A_out.{{ (cycle + leadtime).strftime('%Y-%m-%d_%H.%M.%S') }}.nc
+    rundir: '{{ user.experiment_dir }}/{{ cycle.strftime("%Y%m%d%H") }}/mpassit/{{ "%03d" % (leadtime.total_seconds() / 3600) }}'
   upp:
     # upp settings follow UW Tools driver YAML
     control_file: "{{ user.mpas_app }}/parm/upp/postxconfig-NT-rrfs_mpas.txt"
