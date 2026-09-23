@@ -15,5 +15,6 @@ def test_main(args):
             driver_class=mpassit.MPASSIT,
             config_file=args.config_file,
             cycle=args.cycle,
+            leadtime=args.leadtime,
             key_path=args.key_path,
         )
