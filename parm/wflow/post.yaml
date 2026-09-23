@@ -4,6 +4,8 @@ workflow:
       var:
         fhr: "{% for h in range(0, forecast.mpas['length'] + 1, 6) %}{{ ' %03d' % h }}{% endfor %}"
       task_mpassit_#fhr#:
+        attrs:
+          maxtries: 2
         account: "{{ platform.account }}"
         command:
           cyclestr:
@@ -15,6 +17,7 @@ workflow:
         join:
           cyclestr:
             value: '&LOGDIR;/{{ jobname }}_@Y@m@d@H.log'
+        exclusive: "true"
         partition: "{{ post.mpassit.execution.batchargs.partition }}"
         walltime: "{{ post.mpassit.execution.batchargs.walltime }}"
         nodes: "{{ post.mpassit.execution.batchargs.nodes }}:ppn={{ post.mpassit.execution.batchargs.tasks_per_node }}"
@@ -31,6 +34,8 @@ workflow:
                   value: '{{ user.mpas_app }}/ush/output_is_available_for.sh {{ user.experiment_dir }}/@Y@m@d@H/forecast @Y-@m-@dt@H:00:00 #fhr# {{ user.forecast.output_interval }}'
 
       task_upp_#fhr#:
+        attrs:
+          maxtries: 2
         command:
           cyclestr:
             value: 'source &MPAS_APP;/load_wflow_modules.sh &PLATFORM; && &MPAS_APP;/scripts/upp.py
@@ -52,6 +57,8 @@ workflow:
               task: mpassit_#fhr#
 
       task_combine_grib_#fhr#:
+        attrs:
+          maxtries: 2
         account: "{{ platform.account }}"
         command:
           cyclestr:
