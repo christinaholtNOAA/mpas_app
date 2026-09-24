@@ -105,7 +105,7 @@ def test_merge_vector_fields(success, tmp_path, ungrib_driver):
     ):
         ungrib.merge_vector_fields(ungrib_driver, infile, wgrib_config)
         run_shell_cmd.assert_called_once()
-        args, kwargs = run_shell_cmd.call_args
+        _, kwargs = run_shell_cmd.call_args
 
         assert kwargs["cwd"] == tmp_path
         assert kwargs["taskname"] == f"wgrib2 merge vector fields {infile}"
@@ -142,7 +142,7 @@ def test_regrid_input(ungrib_driver, tmp_path):
         ungrib.regrid_input(ungrib_driver, infile, wgrib_config)
         gribfiles.assert_called_once()
         run_shell_cmd.assert_called_once()
-        args, kwargs = run_shell_cmd.call_args
+        _, kwargs = run_shell_cmd.call_args
 
         assert "foo:bar ' -new_grid_interpolation neighbor" in kwargs["cmd"]
         assert kwargs["cwd"] == tmp_path

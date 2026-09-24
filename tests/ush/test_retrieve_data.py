@@ -462,7 +462,7 @@ def test_try_data_store_hpss(data_locations, tmp_path):
     with patch.object(
         retrieve_data, "possible_hpss_configs", return_value=iter({})
     ) as possible_hpss_configs:
-        success, _ = retrieve_data.try_data_store(
+        retrieve_data.try_data_store(
             config=get_yaml_config({"GFS": gfs_config}),
             cycle=cycle,
             data_store="hpss",

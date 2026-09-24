@@ -16,10 +16,11 @@ from iotaa import Asset, collection, external, task
 from uwtools.api.config import get_yaml_config
 from uwtools.api.logging import use_uwtools_logger
 from uwtools.api.ungrib import Ungrib
+from uwtools.api.utils import run_shell_cmd
 from uwtools.logging import log
 
 from scripts.common import parse_args
-from scripts.utils import run_shell_cmd, walk_key_path
+from scripts.utils import walk_key_path
 
 # A subclass and helper for running HFIP cases.
 

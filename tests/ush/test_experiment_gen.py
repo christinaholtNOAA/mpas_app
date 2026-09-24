@@ -268,7 +268,7 @@ def test_prepare_configs(test_config):
     ):
         get_yaml_config.side_effect = [YAMLConfig(cfg) for cfg in config_dicts]
         path.return_value.parent.parent.resolve.return_value = Path("/some/mpas_app")
-        experiment_config, user_config = experiment_gen.prepare_configs([Path("user.yaml")])
+        experiment_config, _ = experiment_gen.prepare_configs([Path("user.yaml")])
     assert isinstance(experiment_config, YAMLConfig)
     assert experiment_config["data"]["mesh_files"] == test_config["data"]["mesh_files"]
     assert experiment_config["ics_key"] == "ics_value"

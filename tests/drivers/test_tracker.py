@@ -106,7 +106,7 @@ def test_tracker_input_files(driverobj, tmp_path):
         fp.touch()
     driverobj.input_files()
     expected_links = [f"mpas.trak.all.2025102218.f{fmin:05d}" for fmin in (0, 360, 720)]
-    for infile, outlink in zip(infiles, expected_links):
+    for infile, outlink in zip(infiles, expected_links, strict=True):
         expected = tmp_path / "tracker" / outlink
         assert expected.is_symlink()
         assert expected.resolve() == infile
@@ -142,7 +142,7 @@ def test_tracker_input_vitals(driverobj):
     ]
     contents = expected_fn.read_text().strip("\n").split("\n")
     assert len(contents) == 2
-    for line, exp in zip(contents, expected_storms):
+    for line, exp in zip(contents, expected_storms, strict=True):
         assert line.startswith(exp)
 
 

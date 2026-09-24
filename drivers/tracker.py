@@ -134,9 +134,9 @@ class GFDLTracker(DriverCycleBased):
         yield Asset(path, path.is_file)
         input_files = []
         namelist = self.config[STR.namelist]
-        if base_file := namelist.get(STR.basefile):
+        if base_file := namelist.get(STR.base_file):
             input_files.append(base_file)
-        update_values = namelist.get(STR.updatevalues, {})
+        update_values = namelist.get(STR.update_values, {})
         update_values.setdefault("datein", {}).update(
             {
                 "inp": {
@@ -153,7 +153,7 @@ class GFDLTracker(DriverCycleBased):
                 "atcfymdh": int(self.cycle.strftime("%Y%m%d%H")),
             }
         )
-        namelist[STR.updatevalues] = update_values
+        namelist[STR.update_values] = update_values
         yield [file(Path(input_file)) for input_file in input_files]
         self.create_user_updated_config(
             config_class=NMLConfig,

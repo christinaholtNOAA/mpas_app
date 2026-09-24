@@ -112,7 +112,7 @@ def main(args):
     use_uwtools_logger(verbose=clargs.debug)
     print("Running script retrieve_data.py with args:", f"\n{('-' * 80)}\n{('-' * 80)}")
     for name, val in vars(clargs).items():
-        if name not in ["config"]:
+        if name != "config":
             print(f"{name:>15s}: {val}")
     print(f"{('-' * 80)}\n{('-' * 80)}")
 
@@ -336,7 +336,9 @@ def prepare_fs_copy_config(
                     file_item = get_yaml_config(
                         {
                             f"{mem_prefix}{local_fn}.{i}.grib2": f"{loc}/{fn}"
-                            for i, (loc, fn) in enumerate(zip(location, file_templates))
+                            for i, (loc, fn) in enumerate(
+                                zip(location, file_templates, strict=True)
+                            )
                         }
                     )
             elif len(file_templates) == 1:
@@ -377,7 +379,7 @@ def retrieve_data(
     lead_times: list[timedelta],
     members: list[int],
     filefmt: str = "",
-    file_templates: list[str] = [],
+    file_templates: list[str] | None = None,
     inpath: str | Path | None = None,
     summary_file: str | Path | None = None,
     *,
@@ -386,6 +388,9 @@ def retrieve_data(
     """
     Checks for and gathers the requested data.
     """
+
+    if file_templates is None:
+        file_templates = []
 
     standard_filenames = get_filenames(config[data_type]["filenames"], filefmt, fileset)
     config.dereference(context={"cycle": cycle})
