@@ -1,0 +1,3793 @@
+common:
+  account: rtwrfruc
+  queue_default: hpq
+  partition: u1-compute
+  machine: ursa
+  home_rrfs: /scratch3/BMC/rtwrfruc/RRFSv2X/code/rrfs-workflow.20260803
+  expdir: /scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/exp/rrfsdet
+  dataroot: /scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/stmp
+  comroot: /scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/com
+  logroot: /scratch3/BMC/rtwrfruc/RRFSv2X/NCO_dirs/RRFSv2X/com/rrfs/v2.1.4/logs
+  launch: "{{ common.home_rrfs }}/workflow/sideload/launch.sh"
+  logdir: "{{ common.logroot }}/{{ common.run }}.@Y@m@d/@H/{{ common.wgf }}/{{ common.run }}"
+  run: rrfs
+  net: rrfs
+  ver: v2.1.4
+  wgf: det
+  tag: rrfsv2x
+  cycle_first: 202608030000
+  cycle_first_ic: 202608030300
+  cycle_last: 202609302300
+common_envars: &common_envars
+  MACHINE: ursa
+  HOMErrfs: "{{ common.home_rrfs }}"
+  EXPDIR: "{{ common.expdir }}"
+  COMROOT: "{{ common.comroot }}"
+  DATAROOT:
+    cyclestr:
+      value: "{{ common.dataroot }}/@Y@m@d"
+  COMINrrfs: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}"
+  COMOUT:
+    cyclestr:
+      value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H"
+  CDATE:
+    cyclestr:
+      value: "@Y@m@d@H"
+  PDY:
+    cyclestr:
+      value: "@Y@m@d"
+  cyc:
+    cyclestr:
+      value: "@H"
+  NET: "{{ common.net }}"
+  RUN: "{{ common.run }}"
+  rrfs_ver: "{{ common.ver }}"
+  MPI_RUN_CMD: srun
+  MESH_NAME: conus3km
+  WGF: "{{ common.wgf }}"
+  CYC_INTERVAL: 1
+workflow:
+  attrs:
+    realtime: true
+    scheduler: slurm
+    cyclethrottle: 3600
+    taskthrottle: 30
+    cyclelifespan: "2:00:00:00"
+  cycledef:
+    -
+      attrs:
+        group: ic
+      spec: "{{ common.cycle_first_ic }} {{ common.cycle_last }} 12:00:00"
+    -
+      attrs:
+        group: lbc
+      spec: "{{ common.cycle_first }} {{ common.cycle_last }} 12:00:00"
+    -
+      attrs:
+        group: prod
+      spec: "{{ common.cycle_first }} {{ common.cycle_last }} 01:00:00"
+    -
+      attrs:
+        group: spinup
+        valid_hours: "3 4 5 6 7 8 15 16 17 18 19 20"
+      spec: "{{ common.cycle_first }} {{ common.cycle_last }} 01:00:00"
+    -
+      attrs:
+        group: archive
+      spec: "{{ common.cycle_first }} {{ common.cycle_last }} 01:00:00"
+    -
+      attrs:
+        group: post01
+        valid_hours: "0 3 6 9 12 15 18 21"
+      spec: "{{ common.cycle_first }} {{ common.cycle_last }} 01:00:00"
+    -
+      attrs:
+        group: post02
+        valid_hours: "0 12"
+      spec: "{{ common.cycle_first }} {{ common.cycle_last }} 01:00:00"
+  log:
+    attrs:
+      verbosity: 10
+    value:
+      cyclestr:
+        value: "{{ common.logdir }}.log"
+  tasks:
+    task_ioda_bufr:
+      attrs:
+        cycledefs: "prod,spinup"
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_IODA_BUFR"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_ioda_bufr_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_ioda_bufr_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=1"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:50:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        YAML_GEN_METHOD: "1"
+        OBSPATH: "/public/data/grids/rap/obs"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_40_00:
+            cyclestr:
+              attrs:
+                offset: "00:40:00"
+              value: "@Y@m@d@H@M00"
+          datadep_prepbufr:
+            attrs:
+              age: "00:02:00"
+            value:
+              cyclestr:
+                value: "/public/data/grids/rap/obs/@Y@m@d@H.rap.t@Hz.prepbufr.tm00"
+    task_ioda_mrms_refl:
+      attrs:
+        cycledefs: "prod,spinup"
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_IODA_MRMS_REFL"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_ioda_mrms_refl_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_ioda_mrms_refl_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=40"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:50:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        OBSPATH_NSSLMOSIAC: "/public/data/radar/mrms"
+        RADARREFL_TIMELEVEL: "00"
+        MRMS_GRIDSPACINGDEG: "0.03"
+        ASSIM_METHOD: "jedivar"
+        KEEPDATA: "YES"
+      dependency:
+        timedep:
+          cyclestr:
+            attrs:
+              offset: "00:40:00"
+            value: "@Y@m@d@H@M00"
+    task_nonvar_bufrobs:
+      attrs:
+        cycledefs: "prod,spinup"
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_NONVAR_BUFROBS"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_nonvar_bufrobs_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_nonvar_bufrobs_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=1"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:25:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        OBSPATH: "/public/data/grids/rap/obs"
+        NONVAR_LARC_NPTS: "3"
+        NONVAR_METAR_IMPACT: "20"
+        NONVAR_PROJ_NAME: "CONUS"
+        NONVAR_USERDX: "3000"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_40_00:
+            cyclestr:
+              attrs:
+                offset: "00:40:00"
+              value: "@Y@m@d@H@M00"
+          datadep_bufr_d:
+            attrs:
+              age: "00:02:00"
+            value:
+              cyclestr:
+                value: "/public/data/grids/rap/obs/@Y@m@d@H.rap.t@Hz.lgycld.tm00.bufr_d"
+          datadep_prepbufr:
+            attrs:
+              age: "00:02:00"
+            value:
+              cyclestr:
+                value: "/public/data/grids/rap/obs/@Y@m@d@H.rap.t@Hz.prepbufr.tm00"
+    task_nonvar_reflobs:
+      attrs:
+        cycledefs: "prod,spinup"
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_NONVAR_REFLOBS"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_nonvar_reflobs_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_nonvar_reflobs_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=40"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:25:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        OBSPATH_NSSLMOSIAC: "/public/data/radar/mrms"
+        KEEPDATA: "YES"
+      dependency:
+        timedep:
+          cyclestr:
+            attrs:
+              offset: "00:40:00"
+            value: "@Y@m@d@H@M00"
+    task_ungrib_ic:
+      attrs:
+        cycledefs: ic
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UNGRIB"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_ungrib_ic_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_ungrib_ic_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=1"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:50:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        TYPE: "ic"
+        SOURCE_BASEDIR:
+          cyclestr:
+            attrs:
+              offset: "-3:00:00"
+            value: "/public/data/grids/gfs/ncep"
+        FILENAME_PATTERN:
+          cyclestr:
+            attrs:
+              offset: "-3:00:00"
+            value: "gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f^HHH^"
+        EXTRN_MDL_SOURCE: "GFS"
+        OFFSET: "3"
+        KEEPDATA: "YES"
+        FILENAME_PATTERN_B:
+          cyclestr:
+            attrs:
+              offset: "-3:00:00"
+            value: "gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f^HHH^"
+      dependency:
+        and:
+          timedep_00_05_00:
+            cyclestr:
+              attrs:
+                offset: "00:05:00"
+              value: "@Y@m@d@H@M00"
+          datadep_pgrb2:
+            attrs:
+              age: "00:02:00"
+            value:
+              cyclestr:
+                attrs:
+                  offset: "-3:00:00"
+                value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f003"
+          datadep_pgrb2b:
+            attrs:
+              age: "00:02:00"
+            value:
+              cyclestr:
+                attrs:
+                  offset: "-3:00:00"
+                value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f003"
+    metatask_ungrib_lbc:
+      var:
+        group_index: "01 02 03"
+      task_ungrib_lbc_g#group_index#:
+        attrs:
+          cycledefs: lbc
+          maxtries: 3
+        account: "{{ common.account }}"
+        command: "{{ common.launch }} JRRFS_UNGRIB"
+        jobname:
+          cyclestr:
+            value: "{{ common.tag }}_ungrib_lbc_g#group_index#_c@H"
+        join:
+          cyclestr:
+            value: "{{ common.logdir }}_ungrib_lbc_g#group_index#_{{ common.tag }}_@Y@m@d@H.log"
+        nodes: "1:ppn=1"
+        partition: "{{ common.partition }}"
+        queue: "{{ common.queue_default }}"
+        walltime: "00:50:00"
+        native: "--exclusive"
+        deadline:
+          cyclestr:
+            attrs:
+              offset: "24:00:00"
+            value: "@Y@m@d@H@M"
+        envars:
+          <<: *common_envars
+          TYPE: "lbc"
+          SOURCE_BASEDIR:
+            cyclestr:
+              attrs:
+                offset: "-6:00:00"
+              value: "/public/data/grids/gfs/ncep"
+          FILENAME_PATTERN:
+            cyclestr:
+              attrs:
+                offset: "-6:00:00"
+              value: "gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f^HHH^"
+          EXTRN_MDL_SOURCE: "GFS"
+          OFFSET: "6"
+          LENGTH: "84"
+          INTERVAL: "1"
+          GROUP_INDEX: "#group_index#"
+          GROUP_TOTAL_NUM: "3"
+          KEEPDATA: "YES"
+          FILENAME_PATTERN_B:
+            cyclestr:
+              attrs:
+                offset: "-6:00:00"
+              value: "gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f^HHH^"
+        dependency:
+          and:
+            timedep_00_05_00:
+              cyclestr:
+                attrs:
+                  offset: "00:05:00"
+                value: "@Y@m@d@H@M00"
+            datadep_pgrb2:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f006"
+            datadep_pgrb2b:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f006"
+            datadep_pgrb2_2:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f007"
+            datadep_pgrb2b_2:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f007"
+            datadep_pgrb2_3:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f008"
+            datadep_pgrb2b_3:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f008"
+            datadep_pgrb2_4:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f009"
+            datadep_pgrb2b_4:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f009"
+            datadep_pgrb2_5:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f010"
+            datadep_pgrb2b_5:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f010"
+            datadep_pgrb2_6:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f011"
+            datadep_pgrb2b_6:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f011"
+            datadep_pgrb2_7:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f012"
+            datadep_pgrb2b_7:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f012"
+            datadep_pgrb2_8:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f013"
+            datadep_pgrb2b_8:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f013"
+            datadep_pgrb2_9:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f014"
+            datadep_pgrb2b_9:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f014"
+            datadep_pgrb2_10:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f015"
+            datadep_pgrb2b_10:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f015"
+            datadep_pgrb2_11:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f016"
+            datadep_pgrb2b_11:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f016"
+            datadep_pgrb2_12:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f017"
+            datadep_pgrb2b_12:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f017"
+            datadep_pgrb2_13:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f018"
+            datadep_pgrb2b_13:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f018"
+            datadep_pgrb2_14:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f019"
+            datadep_pgrb2b_14:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f019"
+            datadep_pgrb2_15:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f020"
+            datadep_pgrb2b_15:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f020"
+            datadep_pgrb2_16:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f021"
+            datadep_pgrb2b_16:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f021"
+            datadep_pgrb2_17:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f022"
+            datadep_pgrb2b_17:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f022"
+            datadep_pgrb2_18:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f023"
+            datadep_pgrb2b_18:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f023"
+            datadep_pgrb2_19:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f024"
+            datadep_pgrb2b_19:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f024"
+            datadep_pgrb2_20:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f025"
+            datadep_pgrb2b_20:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f025"
+            datadep_pgrb2_21:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f026"
+            datadep_pgrb2b_21:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f026"
+            datadep_pgrb2_22:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f027"
+            datadep_pgrb2b_22:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f027"
+            datadep_pgrb2_23:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f028"
+            datadep_pgrb2b_23:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f028"
+            datadep_pgrb2_24:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f029"
+            datadep_pgrb2b_24:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f029"
+            datadep_pgrb2_25:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f030"
+            datadep_pgrb2b_25:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f030"
+            datadep_pgrb2_26:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f031"
+            datadep_pgrb2b_26:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f031"
+            datadep_pgrb2_27:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f032"
+            datadep_pgrb2b_27:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f032"
+            datadep_pgrb2_28:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f033"
+            datadep_pgrb2b_28:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f033"
+            datadep_pgrb2_29:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f034"
+            datadep_pgrb2b_29:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f034"
+            datadep_pgrb2_30:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f035"
+            datadep_pgrb2b_30:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f035"
+            datadep_pgrb2_31:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f036"
+            datadep_pgrb2b_31:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f036"
+            datadep_pgrb2_32:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f037"
+            datadep_pgrb2b_32:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f037"
+            datadep_pgrb2_33:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f038"
+            datadep_pgrb2b_33:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f038"
+            datadep_pgrb2_34:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f039"
+            datadep_pgrb2b_34:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f039"
+            datadep_pgrb2_35:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f040"
+            datadep_pgrb2b_35:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f040"
+            datadep_pgrb2_36:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f041"
+            datadep_pgrb2b_36:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f041"
+            datadep_pgrb2_37:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f042"
+            datadep_pgrb2b_37:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f042"
+            datadep_pgrb2_38:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f043"
+            datadep_pgrb2b_38:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f043"
+            datadep_pgrb2_39:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f044"
+            datadep_pgrb2b_39:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f044"
+            datadep_pgrb2_40:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f045"
+            datadep_pgrb2b_40:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f045"
+            datadep_pgrb2_41:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f046"
+            datadep_pgrb2b_41:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f046"
+            datadep_pgrb2_42:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f047"
+            datadep_pgrb2b_42:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f047"
+            datadep_pgrb2_43:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f048"
+            datadep_pgrb2b_43:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f048"
+            datadep_pgrb2_44:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f049"
+            datadep_pgrb2b_44:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f049"
+            datadep_pgrb2_45:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f050"
+            datadep_pgrb2b_45:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f050"
+            datadep_pgrb2_46:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f051"
+            datadep_pgrb2b_46:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f051"
+            datadep_pgrb2_47:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f052"
+            datadep_pgrb2b_47:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f052"
+            datadep_pgrb2_48:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f053"
+            datadep_pgrb2b_48:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f053"
+            datadep_pgrb2_49:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f054"
+            datadep_pgrb2b_49:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f054"
+            datadep_pgrb2_50:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f055"
+            datadep_pgrb2b_50:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f055"
+            datadep_pgrb2_51:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f056"
+            datadep_pgrb2b_51:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f056"
+            datadep_pgrb2_52:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f057"
+            datadep_pgrb2b_52:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f057"
+            datadep_pgrb2_53:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f058"
+            datadep_pgrb2b_53:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f058"
+            datadep_pgrb2_54:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f059"
+            datadep_pgrb2b_54:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f059"
+            datadep_pgrb2_55:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f060"
+            datadep_pgrb2b_55:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f060"
+            datadep_pgrb2_56:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f061"
+            datadep_pgrb2b_56:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f061"
+            datadep_pgrb2_57:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f062"
+            datadep_pgrb2b_57:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f062"
+            datadep_pgrb2_58:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f063"
+            datadep_pgrb2b_58:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f063"
+            datadep_pgrb2_59:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f064"
+            datadep_pgrb2b_59:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f064"
+            datadep_pgrb2_60:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f065"
+            datadep_pgrb2b_60:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f065"
+            datadep_pgrb2_61:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f066"
+            datadep_pgrb2b_61:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f066"
+            datadep_pgrb2_62:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f067"
+            datadep_pgrb2b_62:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f067"
+            datadep_pgrb2_63:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f068"
+            datadep_pgrb2b_63:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f068"
+            datadep_pgrb2_64:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f069"
+            datadep_pgrb2b_64:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f069"
+            datadep_pgrb2_65:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f070"
+            datadep_pgrb2b_65:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f070"
+            datadep_pgrb2_66:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f071"
+            datadep_pgrb2b_66:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f071"
+            datadep_pgrb2_67:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f072"
+            datadep_pgrb2b_67:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f072"
+            datadep_pgrb2_68:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f073"
+            datadep_pgrb2b_68:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f073"
+            datadep_pgrb2_69:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f074"
+            datadep_pgrb2b_69:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f074"
+            datadep_pgrb2_70:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f075"
+            datadep_pgrb2b_70:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f075"
+            datadep_pgrb2_71:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f076"
+            datadep_pgrb2b_71:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f076"
+            datadep_pgrb2_72:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f077"
+            datadep_pgrb2b_72:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f077"
+            datadep_pgrb2_73:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f078"
+            datadep_pgrb2b_73:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f078"
+            datadep_pgrb2_74:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f079"
+            datadep_pgrb2b_74:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f079"
+            datadep_pgrb2_75:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f080"
+            datadep_pgrb2b_75:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f080"
+            datadep_pgrb2_76:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f081"
+            datadep_pgrb2b_76:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f081"
+            datadep_pgrb2_77:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f082"
+            datadep_pgrb2b_77:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f082"
+            datadep_pgrb2_78:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f083"
+            datadep_pgrb2b_78:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f083"
+            datadep_pgrb2_79:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f084"
+            datadep_pgrb2b_79:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f084"
+            datadep_pgrb2_80:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f085"
+            datadep_pgrb2b_80:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f085"
+            datadep_pgrb2_81:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f086"
+            datadep_pgrb2b_81:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f086"
+            datadep_pgrb2_82:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f087"
+            datadep_pgrb2b_82:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f087"
+            datadep_pgrb2_83:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f088"
+            datadep_pgrb2b_83:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f088"
+            datadep_pgrb2_84:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f089"
+            datadep_pgrb2b_84:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f089"
+            datadep_pgrb2_85:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2.0p25.f090"
+            datadep_pgrb2b_85:
+              attrs:
+                age: "00:02:00"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-6:00:00"
+                  value: "/public/data/grids/gfs/ncep/gfs.@Y@m@d/@H/atmos/gfs.t@Hz.pgrb2b.0p25.f090"
+    task_ic:
+      attrs:
+        cycledefs: ic
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_IC"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_ic_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_ic_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "2:ppn=192"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:50:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        EXTRN_MDL_SOURCE: "GFS"
+        PHYSICS_SUITE: "hrrrv5"
+        NSOIL_LEVELS: "9"
+        USE_MERRA2: "FALSE"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_10_00:
+            cyclestr:
+              attrs:
+                offset: "00:10:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_ungrib_ic:
+            attrs:
+              task: ungrib_ic
+    metatask_lbc:
+      var:
+        group_index: "01 02 03 04 05 06"
+      task_lbc_g#group_index#:
+        attrs:
+          cycledefs: lbc
+          maxtries: 3
+        account: "{{ common.account }}"
+        command: "{{ common.launch }} JRRFS_LBC"
+        jobname:
+          cyclestr:
+            value: "{{ common.tag }}_lbc_g#group_index#_c@H"
+        join:
+          cyclestr:
+            value: "{{ common.logdir }}_lbc_g#group_index#_{{ common.tag }}_@Y@m@d@H.log"
+        nodes: "2:ppn=192"
+        partition: "{{ common.partition }}"
+        queue: "{{ common.queue_default }}"
+        walltime: "00:50:00"
+        native: "--exclusive"
+        deadline:
+          cyclestr:
+            attrs:
+              offset: "24:00:00"
+            value: "@Y@m@d@H@M"
+        envars:
+          <<: *common_envars
+          EXTRN_MDL_SOURCE: "GFS"
+          PHYSICS_SUITE: "hrrrv5"
+          OFFSET: "6"
+          LENGTH: "84"
+          INTERVAL: "1"
+          GROUP_INDEX: "#group_index#"
+          GROUP_TOTAL_NUM: "6"
+          NSOIL_LEVELS: "9"
+          USE_MERRA2: "FALSE"
+          KEEPDATA: "YES"
+        dependency:
+          and:
+            timedep_00_10_00:
+              cyclestr:
+                attrs:
+                  offset: "00:10:00"
+                value: "@Y@m@d@H@M00"
+            metataskdep_ungrib_lbc:
+              attrs:
+                metatask: ungrib_lbc
+    task_prep_lbc:
+      attrs:
+        cycledefs: "prod,spinup"
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_PREP_LBC"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_prep_lbc_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_prep_lbc_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=1"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:30:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        LBC_INTERVAL: "1"
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        PREP_LBC_LOOK_BACK_HRS: "11"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_lbc_lbc_lbc_lbc:
+            metataskdep_lbc_minus_0_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-0:00:00"
+            metataskdep_lbc_minus_1_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-1:00:00"
+            metataskdep_lbc_minus_2_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-2:00:00"
+            metataskdep_lbc_minus_3_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-3:00:00"
+            metataskdep_lbc_minus_4_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-4:00:00"
+            metataskdep_lbc_minus_5_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-5:00:00"
+            metataskdep_lbc_minus_6_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-6:00:00"
+            metataskdep_lbc_minus_7_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-7:00:00"
+            metataskdep_lbc_minus_8_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-8:00:00"
+            metataskdep_lbc_minus_9_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-9:00:00"
+            metataskdep_lbc_minus_10_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-10:00:00"
+            metataskdep_lbc_minus_11_00_00:
+              attrs:
+                metatask: lbc
+                cycle_offset: "-11:00:00"
+    task_prep_ic_spinup:
+      attrs:
+        cycledefs: spinup
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_PREP_IC"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_prep_ic_spinup_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_prep_ic_spinup_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=10"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:10:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        COLDSTART_CYCS: "03 15"
+        DO_SFC_UPDATE: "TRUE"
+        SST_UPDATE_CYCS: "00 12"
+        LAKE_SOURCE_DIR: "/public/data/grids/rrfs_a"
+        NSST_SOURCE_DIR: "/public/data/grids/ncep/sst/0p083deg/grib2"
+        DO_BLENDING: "FALSE"
+        SPINUP_MODE: "1"
+        PREP_IC_TYPE: "jedivar"
+        USE_THE_LATEST_SATBIAS: "FALSE"
+        KEEPDATA: "YES"
+        SFC_UPDATE_LOOK_BACK_HRS: "3"
+        SFC_UPDATE_SOURCE_DIR: ""
+      dependency:
+        or:
+          and_ic:
+            or_hour_03_hour_15:
+              streq_H_03:
+                left:
+                  cyclestr:
+                    value: "@H"
+                right: "03"
+              streq_H_15:
+                left:
+                  cyclestr:
+                    value: "@H"
+                right: "15"
+            taskdep_ic:
+              attrs:
+                task: ic
+            or_fcst_f001_fcst_f002_fcst_f003:
+              timedep_02_00_00:
+                cyclestr:
+                  attrs:
+                    offset: "02:00:00"
+                  value: "@Y@m@d@H@M00"
+              datadep_fcst_f001:
+                attrs:
+                  age: "00:00:05"
+                value:
+                  cyclestr:
+                    attrs:
+                      offset: "-1:00:00"
+                    value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H/fcst/det/fcst_f001.done"
+              datadep_fcst_f002:
+                attrs:
+                  age: "00:00:05"
+                value:
+                  cyclestr:
+                    attrs:
+                      offset: "-2:00:00"
+                    value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H/fcst/det/fcst_f002.done"
+              datadep_fcst_f003:
+                attrs:
+                  age: "00:00:05"
+                value:
+                  cyclestr:
+                    attrs:
+                      offset: "-3:00:00"
+                    value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H/fcst/det/fcst_f003.done"
+          and_not_hour_03_not_hour_15_fcst_spinup:
+            strneq_H_03:
+              left:
+                cyclestr:
+                  value: "@H"
+              right: "03"
+            strneq_H_15:
+              left:
+                cyclestr:
+                  value: "@H"
+              right: "15"
+            taskdep_fcst_spinup_minus_1_00_00:
+              attrs:
+                task: fcst_spinup
+                cycle_offset: "-1:00:00"
+    task_jedivar_spinup:
+      attrs:
+        cycledefs: spinup
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_JEDIVAR"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_jedivar_spinup_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_jedivar_spinup_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "20:ppn=40"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:25:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        EXTRN_MDL_SOURCE: "GFS"
+        PHYSICS_SUITE: "hrrrv5"
+        LSM_SCHEME: "sf_ruc"
+        NSOIL_LEVELS: "9"
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        YAML_GEN_METHOD: "1"
+        COLDSTART_CYCS_DO_DA: "TRUE"
+        DO_RADAR_REF: "TRUE"
+        HYB_WGT_ENS: "0.5"
+        HYB_WGT_STATIC: "0.5"
+        HYB_ENS_TYPE: "1"
+        HYB_ENS_PATH: ""
+        ENS_BEC_LOOK_BACK_HRS: "1"
+        ENS_SIZE: "30"
+        USE_CONV_SAT_INFO: "TRUE"
+        SAT_USELIST: ""
+        EMPTY_OBS_SPACE_ACTION: "skip output"
+        STATIC_BEC_MODEL: "GSIBEC"
+        GSIBEC_X: "40"
+        GSIBEC_Y: "20"
+        GSIBEC_NLAT: "593"
+        GSIBEC_NLON: "921"
+        GSIBEC_LAT_START: "-15.984000"
+        GSIBEC_LAT_END: "15.984000"
+        GSIBEC_LON_START: "-24.840000"
+        GSIBEC_LON_END: "24.840000"
+        GSIBEC_NORTH_POLE_LAT: "51.226749"
+        GSIBEC_NORTH_POLE_LON: "82.592899"
+        DO_SPINUP: "TRUE"
+        SNUDGETYPES: "GGG"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_40_00:
+            cyclestr:
+              attrs:
+                offset: "00:40:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_prep_ic_spinup:
+            attrs:
+              task: prep_ic_spinup
+          taskdep_ioda_bufr:
+            attrs:
+              task: ioda_bufr
+          or_fcst_f001:
+            datadep_fcst_f001:
+              attrs:
+                age: "00:00:05"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-1:00:00"
+                  value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H/fcst/enkf/fcst_f001.done"
+    task_nonvar_cldana_spinup:
+      attrs:
+        cycledefs: spinup
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_NONVAR_CLDANA"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_nonvar_cldana_spinup_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_nonvar_cldana_spinup_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=40"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:20:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        EXTRN_MDL_SOURCE: "GFS"
+        DO_SPINUP: "TRUE"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_00_01:
+            cyclestr:
+              attrs:
+                offset: "00:00:01"
+              value: "@Y@m@d@H@M00"
+          taskdep_jedivar_spinup:
+            attrs:
+              task: jedivar_spinup
+    task_fcst_spinup:
+      attrs:
+        cycledefs: spinup
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_FCST"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_fcst_spinup_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_fcst_spinup_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "10:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "8:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        EXTRN_MDL_SOURCE: "GFS"
+        LBC_INTERVAL: "1"
+        HISTORY_INTERVAL: "1"
+        DIAG_INTERVAL: "1"
+        RESTART_INTERVAL: "none"
+        MPASOUT_INTERVAL: "1"
+        MPASOUT_TIMELEVELS: "0 1 2 3 15 27"
+        PHYSICS_SUITE: "hrrrv5"
+        LSM_SCHEME: "sf_ruc"
+        NSOIL_LEVELS: "9"
+        FCST_LEN_HRS_CYCLES: "01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01"
+        FCST_DT: "20"
+        FCST_SUBSTEPS: "4"
+        FCST_RADT: "15"
+        DO_SPINUP: "TRUE"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_10_00:
+            cyclestr:
+              attrs:
+                offset: "00:10:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_prep_lbc:
+            attrs:
+              task: prep_lbc
+              cycle_offset: "0:00:00"
+          taskdep_jedivar_spinup:
+            attrs:
+              task: jedivar_spinup
+          taskdep_nonvar_cldana_spinup:
+            attrs:
+              task: nonvar_cldana_spinup
+          taskdep_prep_ic_spinup:
+            attrs:
+              task: prep_ic_spinup
+    task_prep_ic:
+      attrs:
+        cycledefs: prod
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_PREP_IC"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_prep_ic_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_prep_ic_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=10"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:10:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        COLDSTART_CYCS: "03 15"
+        DO_SFC_UPDATE: "TRUE"
+        SST_UPDATE_CYCS: "00 12"
+        LAKE_SOURCE_DIR: "/public/data/grids/rrfs_a"
+        NSST_SOURCE_DIR: "/public/data/grids/ncep/sst/0p083deg/grib2"
+        DO_BLENDING: "FALSE"
+        SPINUP_MODE: "-1"
+        PREP_IC_TYPE: "jedivar"
+        USE_THE_LATEST_SATBIAS: "FALSE"
+        KEEPDATA: "YES"
+        PRODSWITCH_CYCS: "09 21"
+      dependency:
+        and:
+          timedep_02_00_00:
+            cyclestr:
+              attrs:
+                offset: "02:00:00"
+              value: "@Y@m@d@H@M00"
+          or_condition:
+            and_fcst_spinup:
+              or_hour_09_hour_21:
+                streq_H_09:
+                  left:
+                    cyclestr:
+                      value: "@H"
+                  right: "09"
+                streq_H_21:
+                  left:
+                    cyclestr:
+                      value: "@H"
+                  right: "21"
+              taskdep_fcst_spinup_minus_1_00_00:
+                attrs:
+                  task: fcst_spinup
+                  cycle_offset: "-1:00:00"
+            and_not_hour_09_not_hour_21_fcst_f001:
+              strneq_H_09:
+                left:
+                  cyclestr:
+                    value: "@H"
+                right: "09"
+              strneq_H_21:
+                left:
+                  cyclestr:
+                    value: "@H"
+                right: "21"
+              datadep_fcst_f001:
+                attrs:
+                  age: "00:00:05"
+                value:
+                  cyclestr:
+                    attrs:
+                      offset: "-1:00:00"
+                    value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H/fcst/det/fcst_f001.done"
+    task_jedivar:
+      attrs:
+        cycledefs: prod
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_JEDIVAR"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_jedivar_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_jedivar_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "20:ppn=40"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:25:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        EXTRN_MDL_SOURCE: "GFS"
+        PHYSICS_SUITE: "hrrrv5"
+        LSM_SCHEME: "sf_ruc"
+        NSOIL_LEVELS: "9"
+        REFERENCE_TIME: "@Y-@m-@dT@H:00:00Z"
+        YAML_GEN_METHOD: "1"
+        COLDSTART_CYCS_DO_DA: "TRUE"
+        DO_RADAR_REF: "TRUE"
+        HYB_WGT_ENS: "0.5"
+        HYB_WGT_STATIC: "0.5"
+        HYB_ENS_TYPE: "1"
+        HYB_ENS_PATH: ""
+        ENS_BEC_LOOK_BACK_HRS: "1"
+        ENS_SIZE: "30"
+        USE_CONV_SAT_INFO: "TRUE"
+        SAT_USELIST: ""
+        EMPTY_OBS_SPACE_ACTION: "skip output"
+        STATIC_BEC_MODEL: "GSIBEC"
+        GSIBEC_X: "40"
+        GSIBEC_Y: "20"
+        GSIBEC_NLAT: "593"
+        GSIBEC_NLON: "921"
+        GSIBEC_LAT_START: "-15.984000"
+        GSIBEC_LAT_END: "15.984000"
+        GSIBEC_LON_START: "-24.840000"
+        GSIBEC_LON_END: "24.840000"
+        GSIBEC_NORTH_POLE_LAT: "51.226749"
+        GSIBEC_NORTH_POLE_LON: "82.592899"
+        SNUDGETYPES: "GGG"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_40_00:
+            cyclestr:
+              attrs:
+                offset: "00:40:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_prep_ic:
+            attrs:
+              task: prep_ic
+          taskdep_ioda_bufr:
+            attrs:
+              task: ioda_bufr
+          or_fcst_f001:
+            datadep_fcst_f001:
+              attrs:
+                age: "00:00:05"
+              value:
+                cyclestr:
+                  attrs:
+                    offset: "-1:00:00"
+                  value: "{{ common.comroot }}/{{ common.run }}/{{ common.ver }}/{{ common.run }}.@Y@m@d/@H/fcst/enkf/fcst_f001.done"
+    task_nonvar_cldana:
+      attrs:
+        cycledefs: prod
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_NONVAR_CLDANA"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_nonvar_cldana_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_nonvar_cldana_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=40"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:20:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        EXTRN_MDL_SOURCE: "GFS"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_00_01:
+            cyclestr:
+              attrs:
+                offset: "00:00:01"
+              value: "@Y@m@d@H@M00"
+          taskdep_jedivar:
+            attrs:
+              task: jedivar
+    task_fcst:
+      attrs:
+        cycledefs: prod
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_FCST"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_fcst_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_fcst_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "10:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "8:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        EXTRN_MDL_SOURCE: "GFS"
+        LBC_INTERVAL: "1"
+        HISTORY_INTERVAL: "1"
+        DIAG_INTERVAL: "1"
+        RESTART_INTERVAL: "none"
+        MPASOUT_INTERVAL: "1"
+        MPASOUT_TIMELEVELS: "0 1 2 3 15 27"
+        PHYSICS_SUITE: "hrrrv5"
+        LSM_SCHEME: "sf_ruc"
+        NSOIL_LEVELS: "9"
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        FCST_DT: "20"
+        FCST_SUBSTEPS: "4"
+        FCST_RADT: "15"
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_10_00:
+            cyclestr:
+              attrs:
+                offset: "00:10:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_prep_lbc:
+            attrs:
+              task: prep_lbc
+              cycle_offset: "0:00:00"
+          taskdep_jedivar:
+            attrs:
+              task: jedivar
+          taskdep_nonvar_cldana:
+            attrs:
+              task: nonvar_cldana
+          taskdep_prep_ic:
+            attrs:
+              task: prep_ic
+    metatask_save_for_next:
+      var:
+        mpasout_fhr: "01 02 03 15 27"
+      task_save_for_next_f#mpasout_fhr#:
+        attrs:
+          cycledefs: prod
+          maxtries: 3
+        account: "{{ common.account }}"
+        command: "{{ common.launch }} JRRFS_SAVE_FOR_NEXT"
+        jobname:
+          cyclestr:
+            value: "{{ common.tag }}_save_for_next_f#mpasout_fhr#_c@H"
+        join:
+          cyclestr:
+            value: "{{ common.logdir }}_save_for_next_f#mpasout_fhr#_{{ common.tag }}_@Y@m@d@H.log"
+        nodes: "1:ppn=10"
+        partition: "{{ common.partition }}"
+        queue: "{{ common.queue_default }}"
+        walltime: "00:50:00"
+        deadline:
+          cyclestr:
+            attrs:
+              offset: "24:00:00"
+            value: "@Y@m@d@H@M"
+        envars:
+          <<: *common_envars
+          MPASOUT_INTERVAL: "1"
+          FCST_HR: "#mpasout_fhr#"
+          KEEPDATA: "YES"
+        dependency:
+          and:
+            timedep_00_10_00:
+              cyclestr:
+                attrs:
+                  offset: "00:10:00"
+                value: "@Y@m@d@H@M00"
+            datadep_mpasout:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "#mpasout_fhr#:00:00"
+                    value: "/mpasout.@Y-@m-@d_@H.@M.@S.nc.done"
+    task_mpassit_g00:
+      attrs:
+        cycledefs: prod
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g00_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g00_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "00"
+        GROUP_HOURS: "0 1 2 3 4 5 6 7"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "7:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "7:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g00:
+      attrs:
+        cycledefs: prod
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g00_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g00_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "00"
+        GROUP_HOURS: "0 1 2 3 4 5 6 7"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g00:
+            attrs:
+              task: mpassit_g00
+    task_mpassit_g01:
+      attrs:
+        cycledefs: post01
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g01_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g01_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "01"
+        GROUP_HOURS: "8 9 10 11 12 13 14"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "14:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "14:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g01:
+      attrs:
+        cycledefs: post01
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g01_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g01_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "01"
+        GROUP_HOURS: "8 9 10 11 12 13 14"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g01:
+            attrs:
+              task: mpassit_g01
+    task_mpassit_g02:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g02_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g02_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "02"
+        GROUP_HOURS: "15 16 17 18 19 20 21"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "21:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "21:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g02:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g02_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g02_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "02"
+        GROUP_HOURS: "15 16 17 18 19 20 21"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g02:
+            attrs:
+              task: mpassit_g02
+    task_mpassit_g03:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g03_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g03_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "03"
+        GROUP_HOURS: "22 23 24 25 26 27 28"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "28:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "28:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g03:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g03_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g03_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "03"
+        GROUP_HOURS: "22 23 24 25 26 27 28"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g03:
+            attrs:
+              task: mpassit_g03
+    task_mpassit_g04:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g04_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g04_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "04"
+        GROUP_HOURS: "29 30 31 32 33 34 35"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "35:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "35:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g04:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g04_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g04_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "04"
+        GROUP_HOURS: "29 30 31 32 33 34 35"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g04:
+            attrs:
+              task: mpassit_g04
+    task_mpassit_g05:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g05_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g05_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "05"
+        GROUP_HOURS: "36 37 38 39 40 41 42"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "42:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "42:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g05:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g05_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g05_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "05"
+        GROUP_HOURS: "36 37 38 39 40 41 42"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g05:
+            attrs:
+              task: mpassit_g05
+    task_mpassit_g06:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g06_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g06_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "06"
+        GROUP_HOURS: "43 44 45 46 47 48 49"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "49:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "49:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g06:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g06_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g06_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "06"
+        GROUP_HOURS: "43 44 45 46 47 48 49"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g06:
+            attrs:
+              task: mpassit_g06
+    task_mpassit_g07:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g07_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g07_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "07"
+        GROUP_HOURS: "50 51 52 53 54 55 56"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "56:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "56:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g07:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g07_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g07_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "07"
+        GROUP_HOURS: "50 51 52 53 54 55 56"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g07:
+            attrs:
+              task: mpassit_g07
+    task_mpassit_g08:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g08_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g08_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "08"
+        GROUP_HOURS: "57 58 59 60 61 62 63"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "63:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "63:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g08:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g08_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g08_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "08"
+        GROUP_HOURS: "57 58 59 60 61 62 63"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g08:
+            attrs:
+              task: mpassit_g08
+    task_mpassit_g09:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_MPASSIT"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_mpassit_g09_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_mpassit_g09_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      native: "--exclusive"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "09"
+        GROUP_HOURS: "64 65 66 67 68 69 70 71 72"
+        MPASSIT_NX: "1800"
+        MPASSIT_NY: "1060"
+        MPASSIT_DX: "3000.0"
+        MPASSIT_REF_LAT: "38.5"
+        MPASSIT_REF_LON: "-97.5"
+        EXTRN_MDL_SOURCE: "GFS"
+        LSM_SCHEME: "sf_ruc"
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          or_history_diag_fcst:
+            datadep_history:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "72:00:00"
+                    value: "/history.@Y-@m-@d_@H.@M.@S.nc.done"
+            datadep_diag:
+              attrs:
+                age: "00:00:10"
+              value:
+                - cyclestr:
+                    value: "{{ common.dataroot }}/@Y@m@d/rrfs_fcst_@H_v2.1.4/det"
+                - cyclestr:
+                    attrs:
+                      offset: "72:00:00"
+                    value: "/diag.@Y-@m-@d_@H.@M.@S.nc.done"
+            taskdep_fcst:
+              attrs:
+                task: fcst
+    task_upp_g09:
+      attrs:
+        cycledefs: post02
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_UPP"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_upp_g09_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_upp_g09_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=160"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "3:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+        GROUP_INDEX: "09"
+        GROUP_HOURS: "64 65 66 67 68 69 70 71 72"
+        UPP_DOMAIN: "conus."
+        MEMDIR: ""
+        KEEPDATA: "YES"
+      dependency:
+        and:
+          timedep_00_15_00:
+            cyclestr:
+              attrs:
+                offset: "00:15:00"
+              value: "@Y@m@d@H@M00"
+          taskdep_mpassit_g09:
+            attrs:
+              task: mpassit_g09
+    metatask_graphics:
+      var:
+        tile: "full NE NC NW SE SC SW EastCO"
+      task_graphics_#tile#:
+        attrs:
+          cycledefs: prod
+          maxtries: 3
+        account: "{{ common.account }}"
+        command: "{{ common.launch }} JRRFS_GRAPHICS"
+        jobname:
+          cyclestr:
+            value: "{{ common.tag }}_graphics_#tile#_c@H"
+        join:
+          cyclestr:
+            value: "{{ common.logdir }}_graphics_#tile#_{{ common.tag }}_@Y@m@d@H.log"
+        nodes: "1:ppn=20"
+        partition: "{{ common.partition }}"
+        queue: "{{ common.queue_default }}"
+        walltime: "02:00:00"
+        native: "--exclusive"
+        deadline:
+          cyclestr:
+            attrs:
+              offset: "24:00:00"
+            value: "@Y@m@d@H@M"
+        envars:
+          <<: *common_envars
+          FCST_LEN_HRS_CYCLES: "72 03 03 12 03 03 12 03 03 12 03 03 72 03 03 12 03 03 12 03 03 12 03 03"
+          TILE: "#tile#"
+          GRAPHICS_ZIP: "TRUE"
+          GRAPHICS_MODEL: "RRFSv2X"
+          UPP_DOMAIN: "conus."
+        dependency:
+          and:
+            timedep_00_10_00:
+              cyclestr:
+                attrs:
+                  offset: "00:10:00"
+                value: "@Y@m@d@H@M00"
+            taskdep_upp_g00:
+              attrs:
+                task: upp_g00
+            or_not_upp_g01_upp_g01:
+              not_taskvalid_upp_g01:
+                taskvalid:
+                  attrs:
+                    task: upp_g01
+              taskdep_upp_g01:
+                attrs:
+                  task: upp_g01
+            or_not_upp_g02_upp_g02:
+              not_taskvalid_upp_g02:
+                taskvalid:
+                  attrs:
+                    task: upp_g02
+              taskdep_upp_g02:
+                attrs:
+                  task: upp_g02
+            or_not_upp_g03_upp_g03:
+              not_taskvalid_upp_g03:
+                taskvalid:
+                  attrs:
+                    task: upp_g03
+              taskdep_upp_g03:
+                attrs:
+                  task: upp_g03
+            or_not_upp_g04_upp_g04:
+              not_taskvalid_upp_g04:
+                taskvalid:
+                  attrs:
+                    task: upp_g04
+              taskdep_upp_g04:
+                attrs:
+                  task: upp_g04
+            or_not_upp_g05_upp_g05:
+              not_taskvalid_upp_g05:
+                taskvalid:
+                  attrs:
+                    task: upp_g05
+              taskdep_upp_g05:
+                attrs:
+                  task: upp_g05
+            or_not_upp_g06_upp_g06:
+              not_taskvalid_upp_g06:
+                taskvalid:
+                  attrs:
+                    task: upp_g06
+              taskdep_upp_g06:
+                attrs:
+                  task: upp_g06
+            or_not_upp_g07_upp_g07:
+              not_taskvalid_upp_g07:
+                taskvalid:
+                  attrs:
+                    task: upp_g07
+              taskdep_upp_g07:
+                attrs:
+                  task: upp_g07
+            or_not_upp_g08_upp_g08:
+              not_taskvalid_upp_g08:
+                taskvalid:
+                  attrs:
+                    task: upp_g08
+              taskdep_upp_g08:
+                attrs:
+                  task: upp_g08
+            or_not_upp_g09_upp_g09:
+              not_taskvalid_upp_g09:
+                taskvalid:
+                  attrs:
+                    task: upp_g09
+              taskdep_upp_g09:
+                attrs:
+                  task: upp_g09
+    task_archive:
+      attrs:
+        cycledefs: archive
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_ARCHIVE"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_archive_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_archive_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=1"
+      partition: u1-service
+      queue: "{{ common.queue_default }}"
+      walltime: "8:00:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        ARCHIVE_INTERVAL: "1"
+        ARCHIVE_HPSSDIR: "/5year/BMC/wrfruc/{{ common.tag }}"
+        ARCHIVE_COM1_SPEC: "{\"include\":\"ioda*, jedivar, nonvar*, fcst, upp, pyDAmonitor, nclprd\", \"exclude\":\"\"}"
+        ARCHIVE_STMP: ""
+        ARCHIVE_STMP_INTERVAL: "1"
+      dependency:
+        and:
+          timedep_00_00_01:
+            cyclestr:
+              attrs:
+                offset: "00:00:01"
+              value: "@Y@m@d@H@M00"
+          taskdep_upp_g00:
+            attrs:
+              task: upp_g00
+          metataskdep_graphics:
+            attrs:
+              metatask: graphics
+          or_not_upp_g01_upp_g01:
+            not_taskvalid_upp_g01:
+              taskvalid:
+                attrs:
+                  task: upp_g01
+            taskdep_upp_g01:
+              attrs:
+                task: upp_g01
+          or_not_upp_g02_upp_g02:
+            not_taskvalid_upp_g02:
+              taskvalid:
+                attrs:
+                  task: upp_g02
+            taskdep_upp_g02:
+              attrs:
+                task: upp_g02
+          or_not_upp_g03_upp_g03:
+            not_taskvalid_upp_g03:
+              taskvalid:
+                attrs:
+                  task: upp_g03
+            taskdep_upp_g03:
+              attrs:
+                task: upp_g03
+          or_not_upp_g04_upp_g04:
+            not_taskvalid_upp_g04:
+              taskvalid:
+                attrs:
+                  task: upp_g04
+            taskdep_upp_g04:
+              attrs:
+                task: upp_g04
+          or_not_upp_g05_upp_g05:
+            not_taskvalid_upp_g05:
+              taskvalid:
+                attrs:
+                  task: upp_g05
+            taskdep_upp_g05:
+              attrs:
+                task: upp_g05
+          or_not_upp_g06_upp_g06:
+            not_taskvalid_upp_g06:
+              taskvalid:
+                attrs:
+                  task: upp_g06
+            taskdep_upp_g06:
+              attrs:
+                task: upp_g06
+          or_not_upp_g07_upp_g07:
+            not_taskvalid_upp_g07:
+              taskvalid:
+                attrs:
+                  task: upp_g07
+            taskdep_upp_g07:
+              attrs:
+                task: upp_g07
+          or_not_upp_g08_upp_g08:
+            not_taskvalid_upp_g08:
+              taskvalid:
+                attrs:
+                  task: upp_g08
+            taskdep_upp_g08:
+              attrs:
+                task: upp_g08
+          or_not_upp_g09_upp_g09:
+            not_taskvalid_upp_g09:
+              taskvalid:
+                attrs:
+                  task: upp_g09
+            taskdep_upp_g09:
+              attrs:
+                task: upp_g09
+    task_clean:
+      attrs:
+        cycledefs: prod
+        maxtries: 3
+      account: "{{ common.account }}"
+      command: "{{ common.launch }} JRRFS_CLEAN"
+      jobname:
+        cyclestr:
+          value: "{{ common.tag }}_clean_c@H"
+      join:
+        cyclestr:
+          value: "{{ common.logdir }}_clean_{{ common.tag }}_@Y@m@d@H.log"
+      nodes: "1:ppn=1"
+      partition: "{{ common.partition }}"
+      queue: "{{ common.queue_default }}"
+      walltime: "00:50:00"
+      deadline:
+        cyclestr:
+          attrs:
+            offset: "24:00:00"
+          value: "@Y@m@d@H@M"
+      envars:
+        <<: *common_envars
+        CLEAN_MODE: "1"
+        CHECK_IS_CYC_DONE: "FALSE"
+        STMP_RETENTION_CYCS: "18"
+        COM_RETENTION_CYCS: "{\"default\": 96, \"lbc,fcst\": 48, \"upp,nclprd,pyDAmonitor\": 960}"
+        LOG_RETENTION_CYCS: "840"
+        CLEAN_BACK_DAYS: "5"
+        STMP_KEPT_TASKS: ""
+      dependency:
+        and:
+          taskdep_prep_ic:
+            attrs:
+              task: prep_ic
